@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>APiX Compose Player</title>
+  <title>APiX Native Player</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.13/shaka-player.compiled.js"></script>
 
   <style>
@@ -12,7 +12,7 @@
     #player-wrapper { position: relative; width: 100%; height: 100%; background: #000; }
     video { width: 100%; height: 100%; object-fit: contain; }
 
-    /* Loading Spinner */
+    /* دائرة التحميل الحمراء */
     .spinner {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       width: 44px; height: 44px; border: 3px solid rgba(229, 9, 20, 0.2);
@@ -21,7 +21,7 @@
     }
     @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-    /* Error Overlay */
+    /* شاشة الخطأ */
     #error-overlay {
       position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 60;
       color: #fff; display: none; flex-direction: column; align-items: center; justify-content: center;
@@ -33,71 +33,50 @@
     }
     .retry-btn:hover { background: #fff; color: #000; }
 
-    /* UI Layer */
+    /* طبقة واجهة المستخدم */
     #ui-layer {
       position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between;
       z-index: 20; transition: opacity 0.3s ease; opacity: 0; pointer-events: none;
     }
     #ui-layer.visible { opacity: 1; pointer-events: auto; }
 
-    /* Top Bar */
-    .top-bar {
-      background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
-      padding: 12px 16px; display: flex; align-items: center; gap: 16px; justify-content: space-between;
-    }
+    /* الشريط العلوي والسفلي */
+    .top-bar { background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); padding: 12px 16px; display: flex; align-items: center; gap: 16px; justify-content: space-between; }
     .stream-title { color: #fff; font-size: 16px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; }
-
-    /* Bottom Bar */
-    .bottom-bar {
-      background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-      padding: 8px 16px 16px 16px; display: flex; flex-direction: column; gap: 4px;
-    }
+    .bottom-bar { background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 8px 16px 16px 16px; display: flex; flex-direction: column; gap: 4px; }
     
-    /* Progress */
+    /* شريط التقديم */
     .progress-row { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 14px; }
     input[type=range] {
-      flex: 1; -webkit-appearance: none; background: rgba(255,255,255,0.26);
-      height: 16px; border-radius: 8px; cursor: pointer; outline: none;
+      flex: 1; -webkit-appearance: none; background: rgba(255,255,255,0.26); height: 16px; border-radius: 8px; cursor: pointer; outline: none;
       background-image: linear-gradient(#E50914, #E50914); background-size: 0% 100%; background-repeat: no-repeat;
     }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
-      background: #fff; cursor: pointer; transition: 0.1s;
-    }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; cursor: pointer; transition: 0.1s; }
     input[type=range]:focus::-webkit-slider-thumb { transform: scale(1.3); }
 
-    /* Controls */
+    /* الأزرار (Compose Style) */
     .controls-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px;}
     .left-controls { display: flex; gap: 16px; align-items: center; }
     .right-controls { display: flex; gap: 12px; align-items: center; }
-
-    /* Buttons */
-    .btn {
-      background: transparent; border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;
-      border-radius: 50%; transition: transform 0.2s, border-color 0.2s;
-    }
+    .btn { background: transparent; border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: transform 0.2s, border-color 0.2s; }
     .btn svg { fill: transparent; stroke: #fff; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-    
     .btn-32 { width: 32px; height: 32px; } .btn-32 svg { width: 20px; height: 20px; }
     .btn-36 { width: 36px; height: 36px; } .btn-36 svg { width: 23px; height: 23px; }
     .btn-38 { width: 38px; height: 38px; } .btn-38 svg { width: 24px; height: 24px; }
     .btn-44 { width: 44px; height: 44px; } .btn-44 svg { width: 28px; height: 28px; }
-
     .focusable:focus, .btn:hover { border: 2px solid #FFD700; transform: scale(1.15); background: rgba(255,255,255,0.1); }
     .focusable:focus svg, .btn:hover svg { stroke: #FFD700; }
 
-    /* Quality Menu */
-    #quality-menu {
+    /* القوائم المنبثقة (جودة، صوت، ترجمة) */
+    .popup-menu {
       position: absolute; bottom: 80px; right: 16px; background: #111111;
       border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; min-width: 180px;
       display: none; flex-direction: column; padding: 8px; z-index: 100; max-height: 50vh; overflow-y: auto;
     }
-    #quality-menu.visible { display: flex; }
-    .q-item {
-      background: transparent; color: #fff; border: none; padding: 12px; text-align: left;
-      font-size: 14px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between;
-    }
-    .q-item:focus, .q-item:hover, .q-item.active { background: rgba(255,255,255,0.1); color: #FFD700; }
+    .popup-menu.visible { display: flex; }
+    .q-item { background: transparent; color: #fff; border: none; padding: 12px; text-align: left; font-size: 14px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; margin-bottom: 2px;}
+    .q-item:focus, .q-item:hover, .q-item.active { background: rgba(255,255,255,0.1); color: #FFD700; font-weight: bold;}
+    .menu-title { color: #888; font-size: 12px; padding: 4px 12px 8px 12px; border-bottom: 1px solid #333; margin-bottom: 8px; text-align: center;}
   </style>
 </head>
 <body>
@@ -109,7 +88,7 @@
   <div id="error-overlay">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     <h3 id="error-title" style="font-size: 18px; font-weight: bold;">فشل تشغيل البث</h3>
-    <button class="retry-btn focusable" onclick="history.back()">إغلاق</button>
+    <button class="retry-btn focusable" onclick="history.back()">رجوع</button>
   </div>
 
   <div id="ui-layer">
@@ -142,17 +121,20 @@
         </div>
 
         <div class="right-controls">
-          <button class="btn btn-32 focusable" onclick="toggleMute()" id="muteBtn" title="Audio">
+          <button class="btn btn-32 focusable" onclick="toggleMute()" id="muteBtn" title="Mute">
             <svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" id="vol-waves"/></svg>
           </button>
-          <button class="btn btn-32 focusable" onclick="toggleQualityMenu()" title="Quality">
+          <button class="btn btn-32 focusable" onclick="toggleMenu('subs-menu')" title="Subtitles">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          <button class="btn btn-32 focusable" onclick="toggleMenu('audio-menu')" title="Audio Track">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </button>
+          <button class="btn btn-32 focusable" onclick="toggleMenu('quality-menu')" title="Quality">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
           <button class="btn btn-32 focusable" onclick="toggleResize()" title="Resize">
             <svg viewBox="0 0 24 24"><path d="M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7"/></svg>
-          </button>
-          <button class="btn btn-32 focusable" onclick="togglePiP()" title="PiP">
-            <svg viewBox="0 0 24 24"><path d="M9 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3 M13 13h6a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/></svg>
           </button>
           <button class="btn btn-32 focusable" onclick="toggleFullScreen()" title="Fullscreen">
             <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
@@ -162,7 +144,9 @@
     </div>
   </div>
 
-  <div id="quality-menu"></div>
+  <div id="quality-menu" class="popup-menu"></div>
+  <div id="audio-menu" class="popup-menu"></div>
+  <div id="subs-menu" class="popup-menu"></div>
 </div>
 
 <script>
@@ -174,21 +158,15 @@
   const seekBar = document.getElementById('seekBar');
   let hideTimeout;
 
-  // جلب البيانات من الرابط بأمان
   function getParams() {
     const p = new URLSearchParams(window.location.search);
-    let url = p.get('url') || "";
-    let ck = p.get('ck') || "";
-    let title = p.get('title') || "APiX Stream";
-    return { url, ck, title };
+    return { url: p.get('url'), ck: p.get('ck'), title: p.get('title') || "APiX Stream" };
   }
 
-  // الدالة المنقذة: تنظيف المفاتيح (السبب الحقيقي وراء نجاح المشغل الأول)
   function parseClearKey(ckString) {
     if (!ckString) return null;
     const parts = ckString.split(':');
     if (parts.length !== 2) return null;
-    // سر النجاح: trim() و toLowerCase()
     const kid = parts[0].trim().toLowerCase().replace(/[^a-f0-9]/g, '');
     const key = parts[1].trim().toLowerCase().replace(/[^a-f0-9]/g, '');
     if (!kid || !key) return null;
@@ -205,10 +183,8 @@
 
     shaka.polyfill.installAll();
     player = new shaka.Player(video);
-
     const config = { streaming: { lowLatencyMode: true }, drm: {} };
     
-    // تطبيق الدالة المنقذة
     const ckParsed = parseClearKey(ck);
     if (ckParsed) {
       config.drm.clearKeys = { [ckParsed.kid]: ckParsed.key };
@@ -218,7 +194,6 @@
 
     player.addEventListener('error', (e) => {
       spinner.style.display = 'none'; errorOverlay.style.display = 'flex';
-      document.getElementById('error-title').innerText = e.detail?.message || "فشل التشغيل";
     });
 
     video.addEventListener('waiting', () => spinner.style.display = 'block');
@@ -229,32 +204,65 @@
       spinner.style.display = 'none';
       video.play();
       showUi();
-      populateQualityMenu();
+      populateMenus(); // بناء قوائم الصوت والدقة والترجمة
     } catch (e) {
       spinner.style.display = 'none'; errorOverlay.style.display = 'flex';
     }
   }
 
-  // باقي أوامر الواجهة تعمل بنفس الطريقة
-  function populateQualityMenu() {
+  // ==========================================
+  // نظام القوائم (الدقة، الصوت، الترجمة)
+  // ==========================================
+  function populateMenus() {
+    // 1. قائمة الدقة (Quality)
     const tracks = player.getVariantTracks();
     const heights = [...new Set(tracks.filter(t => t.height).map(t => t.height))].sort((a,b)=> b-a);
-    const menu = document.getElementById('quality-menu');
-    menu.innerHTML = `<button class="q-item focusable active" onclick="setQuality('auto', this)"><span>تلقائي</span></button>`;
+    const qMenu = document.getElementById('quality-menu');
+    qMenu.innerHTML = `<div class="menu-title">دقة الفيديو</div><button class="q-item focusable active" onclick="setQuality('auto', this, 'quality-menu')"><span>تلقائي</span></button>`;
     heights.forEach(h => {
-      menu.innerHTML += `<button class="q-item focusable" onclick="setQuality(${h}, this)"><span>${h}p</span></button>`;
+      qMenu.innerHTML += `<button class="q-item focusable" onclick="setQuality(${h}, this, 'quality-menu')"><span>${h}p</span></button>`;
     });
+
+    // 2. قائمة لغة الصوت (Audio)
+    const audioLangs = player.getAudioLanguages();
+    const aMenu = document.getElementById('audio-menu');
+    aMenu.innerHTML = `<div class="menu-title">لغة الصوت</div>`;
+    if(audioLangs.length === 0) {
+       aMenu.innerHTML += `<button class="q-item focusable active"><span>الافتراضي</span></button>`;
+    } else {
+       audioLangs.forEach((lang, idx) => {
+         aMenu.innerHTML += `<button class="q-item focusable ${idx===0?'active':''}" onclick="setAudio('${lang}', this)"><span>${lang.toUpperCase()}</span></button>`;
+       });
+    }
+
+    // 3. قائمة الترجمة (Subtitles)
+    const textTracks = player.getTextTracks();
+    const sMenu = document.getElementById('subs-menu');
+    sMenu.innerHTML = `<div class="menu-title">الترجمة</div><button class="q-item focusable active" onclick="setSub(null, this)"><span>إيقاف</span></button>`;
+    textTracks.forEach(t => {
+      sMenu.innerHTML += `<button class="q-item focusable" onclick="setSub('${t.language}', this)"><span>${t.language.toUpperCase()}</span></button>`;
+    });
+
     updateFocusables();
   }
 
-  function toggleQualityMenu() {
-    const menu = document.getElementById('quality-menu');
-    menu.classList.toggle('visible');
-    if(menu.classList.contains('visible')) menu.querySelector('.q-item')?.focus();
+  function closeAllMenus() {
+    document.querySelectorAll('.popup-menu').forEach(m => m.classList.remove('visible'));
   }
 
+  function toggleMenu(menuId) {
+    const menu = document.getElementById(menuId);
+    const isVisible = menu.classList.contains('visible');
+    closeAllMenus();
+    if(!isVisible) {
+      menu.classList.add('visible');
+      menu.querySelector('.q-item')?.focus();
+    }
+  }
+
+  // تطبيق الإعدادات
   window.setQuality = function(height, element) {
-    document.querySelectorAll('.q-item').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('quality-menu').querySelectorAll('.q-item').forEach(btn => btn.classList.remove('active'));
     element.classList.add('active');
     if(height === 'auto') player.configure({ abr: { enabled: true } });
     else {
@@ -262,9 +270,31 @@
       const tracks = player.getVariantTracks().filter(t => t.height === height);
       if(tracks.length > 0) player.selectVariantTrack(tracks[0], true);
     }
-    document.getElementById('quality-menu').classList.remove('visible');
+    closeAllMenus();
   }
 
+  window.setAudio = function(lang, element) {
+    document.getElementById('audio-menu').querySelectorAll('.q-item').forEach(btn => btn.classList.remove('active'));
+    element.classList.add('active');
+    player.selectAudioLanguage(lang);
+    closeAllMenus();
+  }
+
+  window.setSub = function(lang, element) {
+    document.getElementById('subs-menu').querySelectorAll('.q-item').forEach(btn => btn.classList.remove('active'));
+    element.classList.add('active');
+    if(!lang) {
+      player.setTextTrackVisibility(false);
+    } else {
+      player.selectTextLanguage(lang);
+      player.setTextTrackVisibility(true);
+    }
+    closeAllMenus();
+  }
+
+  // ==========================================
+  // التحكم بالفيديو والوقت
+  // ==========================================
   function fmt(sec) {
     if (isNaN(sec)) return "00:00";
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);
@@ -308,21 +338,21 @@
     showUi();
   }
 
-  window.togglePiP = async function() {
-    if (document.pictureInPictureEnabled) {
-      if (document.pictureInPictureElement) await document.exitPictureInPicture();
-      else await video.requestPictureInPicture();
-    }
-  }
-
+  // ==========================================
+  // إظهار/إخفاء الواجهة ودعم الريموت (D-Pad)
+  // ==========================================
   function showUi() {
     uiLayer.classList.add('visible');
     clearTimeout(hideTimeout);
     hideTimeout = setTimeout(() => {
-      if(!video.paused) { uiLayer.classList.remove('visible'); document.getElementById('quality-menu').classList.remove('visible'); }
+      if(!video.paused) { uiLayer.classList.remove('visible'); closeAllMenus(); }
     }, 4000);
   }
   
+  document.getElementById('player-wrapper').addEventListener('click', (e) => {
+    if(e.target.closest('.popup-menu') || e.target.closest('.btn')) return; // لا تخفي الواجهة إذا ضغطت على قائمة
+    showUi();
+  });
   document.addEventListener('mousemove', showUi); document.addEventListener('touchstart', showUi);
 
   let focusables = []; let focusIndex = -1;
@@ -339,8 +369,9 @@
       focusIndex = (focusIndex - 1 + focusables.length) % focusables.length; focusables[focusIndex].focus(); e.preventDefault();
     }
     else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      if(document.getElementById('quality-menu').classList.contains('visible')){
-         const qItems = Array.from(document.querySelectorAll('.q-item'));
+      const openMenu = document.querySelector('.popup-menu.visible');
+      if(openMenu){
+         const qItems = Array.from(openMenu.querySelectorAll('.q-item'));
          let qIdx = qItems.findIndex(el => el === document.activeElement);
          if(e.key === 'ArrowDown') qIdx = (qIdx + 1) % qItems.length; else qIdx = (qIdx - 1 + qItems.length) % qItems.length;
          qItems[qIdx].focus(); e.preventDefault();
