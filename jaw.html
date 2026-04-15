@@ -1,281 +1,81 @@
 <!DOCTYPE html>
-<html lang="ar" dir="ltr">
+<html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>APiX JW Pro</title>
-
-  <script src="https://content.jwplatform.com/libraries/KB5zFt7A.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>APiX JW Fixed</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.13/shaka-player.compiled.js"></script>
   <style>
-    :root { --gold: #FFD700; --red: #E50914; }
-    * { box-sizing: border-box; user-select: none; outline: none; margin: 0; padding: 0; }
-    html, body { width: 100vw; height: 100vh; background: #000; overflow: hidden; font-family: sans-serif; }
-    
-    #player-container { position: relative; width: 100%; height: 100%; background: #000; }
-    
-    /* جعل فيديو جواو يملأ الشاشة */
-    .jwplayer { width: 100% !important; height: 100% !important; }
-    .jw-video { object-fit: contain !important; }
-
-    /* دائرة التحميل */
-    .spinner {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 50px; height: 50px; border: 4px solid rgba(255, 215, 0, 0.1);
-      border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite;
-      display: none; z-index: 100;
-    }
-    @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
-
-    /* طبقة واجهة المستخدم (التصميم الأحمر) */
-    #ui-layer {
-      position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between;
-      z-index: 80; transition: opacity 0.4s; opacity: 0; pointer-events: none;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent 20%, transparent 80%, rgba(0,0,0,0.8));
-    }
-    #ui-layer.visible { opacity: 1; pointer-events: auto; }
-
-    .top-bar { padding: 20px; text-align: center; }
-    .stream-title { color: #fff; font-size: 18px; font-weight: bold; text-shadow: 0 2px 4px #000; }
-
-    .bottom-bar { padding: 10px 20px 30px; }
-    
-    .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; color: #fff; font-size: 13px; }
-    .progress-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.2); border-radius: 10px; position: relative; overflow: hidden; }
-    #progress-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--red); }
-
-    .btns-row { display: flex; align-items: center; justify-content: space-between; }
-    .side { display: flex; align-items: center; gap: 20px; }
-
-    /* أزرار الريموت */
-    .btn {
-      background: transparent; border: 2px solid transparent; color: #fff; cursor: pointer;
-      border-radius: 50%; padding: 10px; display: flex; align-items: center; justify-content: center;
-      transition: 0.2s;
-    }
-    /* فوكس ذهبي للريموت */
-    .btn:focus, .btn:hover {
-      border-color: var(--gold); background: rgba(255, 215, 0, 0.2);
-      transform: scale(1.1); box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
-    }
-    .btn i { width: 28px; height: 28px; }
-
-    /* القوائم المنبثقة */
-    .menu-pop {
-      position: absolute; bottom: 100px; left: 20px; background: rgba(15,15,15,0.95);
-      border: 1px solid var(--gold); border-radius: 12px; min-width: 180px;
-      display: none; flex-direction: column; padding: 8px; z-index: 120;
-    }
-    .menu-pop.visible { display: flex; }
-    .m-item {
-      background: transparent; color: #fff; border: 2px solid transparent; padding: 12px;
-      text-align: right; font-size: 14px; border-radius: 8px; cursor: pointer;
-    }
-    .m-item:focus, .m-item:hover, .m-item.active { background: rgba(255,215,0,0.1); border-color: var(--gold); color: var(--gold); }
+    :root{ --red: #E50914; --gold: #FFD700; }
+    body, html{ margin:0; padding:0; width:100%; height:100%; background:#000; font-family:sans-serif; overflow:hidden; }
+    video{ width:100%; height:100%; object-fit:contain; }
+    #ui{ position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(rgba(0,0,0,0.6), transparent, rgba(0,0,0,0.8)); color:#fff; padding:20px; opacity:0; transition:0.3s; pointer-events:none; }
+    #ui.show{ opacity:1; pointer-events:auto; }
+    .btn-group{ display:flex; gap:15px; align-items:center; justify-content:center; }
+    .btn{ background:rgba(255,255,255,0.1); border:2px solid transparent; color:#fff; border-radius:50%; width:45px; height:45px; cursor:pointer; font-weight:bold; }
+    .btn:focus{ border-color:var(--gold); transform:scale(1.1); }
+    #prog{ height:5px; background:rgba(255,255,255,0.2); width:100%; border-radius:10px; margin-bottom:10px; overflow:hidden; }
+    #fill{ height:100%; width:0%; background:var(--red); }
   </style>
 </head>
-
 <body>
-<div id="player-container">
-  <div id="jw-div"></div> <div id="loading" class="spinner"></div>
-
-  <div id="ui-layer">
-    <div class="top-bar">
-      <div class="stream-title" id="stTitle">APiX JW PRO</div>
+  <video id="v" autoplay playsinline></video>
+  <div id="ui">
+    <div id="title" style="text-align:center; font-weight:bold;">APiX JW PRO</div>
+    <div class="center-play" style="text-align:center;">
+       <button class="btn focusable" id="pBtn" style="width:70px;height:70px;font-size:20px;">⏸</button>
     </div>
-
-    <div class="bottom-bar">
-      <div class="progress-row" id="timeInfo">
-        <span id="cTime">00:00</span>
-        <div class="progress-bar"><div id="progress-fill"></div></div>
-        <span id="dTime">00:00</span>
-      </div>
-
-      <div class="btns-row">
-        <div class="side">
-          <button class="btn focusable" onclick="jwplayer().seek(jwplayer().getPosition()-10)"><i data-feather="rotate-ccw"></i></button>
-          <button class="btn focusable" id="playBtn" onclick="jwplayer().play()"><i data-feather="play"></i></button>
-          <button class="btn focusable" onclick="jwplayer().seek(jwplayer().getPosition()+10)"><i data-feather="rotate-cw"></i></button>
-        </div>
-
-        <div class="side">
-          <button class="btn focusable" onclick="toggleMute()" id="muteBtn"><i data-feather="volume-2"></i></button>
-          <button class="btn focusable" onclick="toggleMenu('q-menu')"><i data-feather="settings"></i></button>
-          <button class="btn focusable" onclick="toggleMenu('a-menu')"><i data-feather="globe"></i></button>
-          <button class="btn focusable" onclick="toggleFit()"><i data-feather="maximize"></i></button>
-          <button class="btn focusable" onclick="toggleFS()"><i data-feather="screen"></i></button>
-        </div>
+    <div>
+      <div id="prog"><div id="fill"></div></div>
+      <div class="btn-group">
+        <button class="btn focusable" onclick="v.currentTime-=10">⏪</button>
+        <button class="btn focusable" onclick="v.currentTime+=10">⏩</button>
+        <button class="btn focusable" onclick="tFS()">🔳</button>
       </div>
     </div>
-
-    <div id="q-menu" class="menu-pop"></div>
-    <div id="a-menu" class="menu-pop"></div>
   </div>
-</div>
 
-<script>
-  feather.replace();
-  let uiTimeout;
+  <script>
+    const v = document.getElementById('v'), ui = document.getElementById('ui');
+    let player, hideT;
 
-  // تحويل KID:KEY إلى تنسيق يفهمه JW Player
-  function getDRMConfig(ck) {
-    if (!ck || !ck.includes(':')) return null;
-    const parts = ck.split(':');
-    const kid = parts[0].trim().toLowerCase().replace(/[^a-f0-9]/g, '');
-    const key = parts[1].trim().toLowerCase().replace(/[^a-f0-9]/g, '');
-    
-    return {
-      clearkey: {
-        keyId: kid,
-        key: key
-      }
-    };
-  }
-
-  function init() {
-    const p = new URLSearchParams(window.location.search);
-    const url = p.get('url'), ck = p.get('ck'), title = p.get('title') || "APiX Stream";
-    
-    document.getElementById('stTitle').innerText = title;
-    document.getElementById('loading').style.display = 'block';
-
-    const drm = getDRMConfig(ck);
-
-    // تهيئة JW Player
-    const player = jwplayer("jw-div").setup({
-      file: url,
-      drm: drm, // هنا السحر الذي يدعم MPD و ClearKey
-      width: "100%",
-      height: "100%",
-      autostart: true,
-      controls: false, // نستخدم واجهتنا نحن
-      stretching: "uniform",
-      type: url.includes('.mpd') ? 'dash' : (url.includes('.m3u8') ? 'hls' : 'mp4')
-    });
-
-    player.on('ready', () => {
-      document.getElementById('loading').style.display = 'none';
-      showUi();
-    });
-
-    player.on('play', () => {
-      document.getElementById('playBtn').innerHTML = '<i data-feather="pause"></i>';
-      feather.replace();
-      showUi();
-    });
-
-    player.on('pause', () => {
-      document.getElementById('playBtn').innerHTML = '<i data-feather="play"></i>';
-      feather.replace();
-      showUi();
-    });
-
-    player.on('time', (e) => {
-      if (e.duration > 0) {
-        document.getElementById('cTime').innerText = fmt(e.position);
-        document.getElementById('dTime').innerText = fmt(e.duration);
-        document.getElementById('progress-fill').style.width = (e.position / e.duration * 100) + '%';
-      } else {
-        document.getElementById('timeInfo').style.display = 'none';
-      }
-    });
-
-    player.on('levels', (e) => buildQualityMenu(e.levels));
-    player.on('audioTracks', (e) => buildAudioMenu(e.audioTracks));
-    
-    player.on('error', (e) => {
-      console.error("JW Error: ", e);
-      document.getElementById('loading').style.display = 'none';
-    });
-  }
-
-  function buildQualityMenu(lvls) {
-    const m = document.getElementById('q-menu');
-    m.innerHTML = '<div style="color:gray;font-size:10px;text-align:center;padding:5px;">الجودة</div>';
-    lvls.forEach((l, i) => {
-      m.innerHTML += `<button class="m-item focusable" onclick="jwplayer().setCurrentQuality(${i});toggleMenu(null)">${l.label}</button>`;
-    });
-  }
-
-  function buildAudioMenu(tracks) {
-    const m = document.getElementById('a-menu');
-    m.innerHTML = '<div style="color:gray;font-size:10px;text-align:center;padding:5px;">الصوت</div>';
-    tracks.forEach((t, i) => {
-      m.innerHTML += `<button class="m-item focusable" onclick="jwplayer().setCurrentAudioTrack(${i});toggleMenu(null)">${t.name}</button>`;
-    });
-  }
-
-  function toggleMenu(id) {
-    const wasV = id ? document.getElementById(id).classList.contains('visible') : false;
-    document.querySelectorAll('.menu-pop').forEach(m => m.classList.remove('visible'));
-    if (id && !wasV) {
-      document.getElementById(id).classList.add('visible');
-      document.getElementById(id).querySelector('.focusable')?.focus();
+    function parseCK(s){
+      if(!s || !s.includes(':')) return null;
+      const p = s.split(':');
+      return { kid: p[0].trim().toLowerCase().replace(/[^a-f0-9]/g,''), key: p[1].trim().toLowerCase().replace(/[^a-f0-9]/g,'') };
     }
-  }
 
-  function fmt(s) { const m=Math.floor(s/60), v=Math.floor(s%60); return m.toString().padStart(2,'0')+":"+v.toString().padStart(2,'0'); }
-  
-  function showUi() {
-    const ui = document.getElementById('ui-layer');
-    ui.classList.add('visible');
-    clearTimeout(uiTimeout);
-    uiTimeout = setTimeout(() => { if(jwplayer().getState()==='playing') ui.classList.remove('visible'); }, 5000);
-  }
+    async function init(){
+      const p = new URLSearchParams(window.location.search);
+      const url = p.get('url'), ck = p.get('ck'), title = p.get('title');
+      if(title) document.getElementById('title').innerText = title;
 
-  function toggleMute() {
-    const m = jwplayer().getMute();
-    jwplayer().setMute(!m);
-    document.getElementById('muteBtn').innerHTML = `<i data-feather="${!m?'volume-x':'volume-2'}"></i>`;
-    feather.replace();
-  }
+      shaka.polyfill.installAll();
+      player = new shaka.Player(v);
+      const drm = parseCK(ck);
+      if(drm) player.configure({ drm: { clearKeys: { [drm.kid]: drm.key } } });
 
-  let fMode = 0;
-  function toggleFit() {
-    const modes = ['uniform', 'exactfit', 'fill'];
-    fMode = (fMode + 1) % 3;
-    jwplayer().setStretching(modes[fMode]);
-  }
-
-  function toggleFS() {
-    const container = document.getElementById('player-container');
-    if (!document.fullscreenElement) container.requestFullscreen();
-    else document.exitFullscreen();
-  }
-
-  // دعم الريموت D-pad
-  document.addEventListener('keydown', (e) => {
-    showUi();
-    const focusables = Array.from(document.querySelectorAll('.focusable'));
-    let idx = focusables.indexOf(document.activeElement);
-
-    if (e.key === 'ArrowRight') {
-      idx = (idx + 1) % focusables.length;
-      focusables[idx].focus();
-      e.preventDefault();
-    } else if (e.key === 'ArrowLeft') {
-      idx = (idx - 1 + focusables.length) % focusables.length;
-      focusables[idx].focus();
-      e.preventDefault();
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-      const openMenu = document.querySelector('.menu-pop.visible');
-      if (openMenu) {
-        const items = Array.from(openMenu.querySelectorAll('.m-item'));
-        let i = items.indexOf(document.activeElement);
-        if (e.key === 'ArrowDown') i = (i + 1) % items.length;
-        else i = (i - 1 + items.length) % items.length;
-        items[i].focus();
-        e.preventDefault();
-      }
-    } else if (e.key === 'Enter') {
-      if (document.activeElement) document.activeElement.click();
+      try { await player.load(url); showUi(); } catch(e){}
     }
-  });
 
-  document.addEventListener('mousemove', showUi);
-  document.addEventListener('touchstart', showUi);
-  init();
-</script>
+    function showUi(){ ui.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(()=>ui.classList.remove('show'), 4000); }
+    v.ontimeupdate = () => document.getElementById('fill').style.width = (v.currentTime/v.duration*100)+'%';
+    document.getElementById('pBtn').onclick = () => { if(v.paused) v.play(); else v.pause(); };
+    v.onplay = () => document.getElementById('pBtn').innerText = '⏸';
+    v.onpause = () => document.getElementById('pBtn').innerText = '▶️';
+    function tFS(){ if(!document.fullscreenElement) document.body.requestFullscreen(); else document.exitFullscreen(); }
+    
+    document.addEventListener('keydown', (e) => {
+      showUi();
+      const f = Array.from(document.querySelectorAll('.focusable'));
+      let i = f.indexOf(document.activeElement);
+      if(e.key==='ArrowRight') { i=(i+1)%f.length; f[i].focus(); e.preventDefault(); }
+      if(e.key==='ArrowLeft') { i=(i-1+f.length)%f.length; f[i].focus(); e.preventDefault(); }
+      if(e.key==='Enter') document.activeElement.click();
+    });
+
+    document.addEventListener('mousemove', showUi);
+    init();
+  </script>
 </body>
 </html>
