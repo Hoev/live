@@ -6,82 +6,93 @@
   <title>APiX Web Player Pro</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.13/shaka-player.compiled.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <meta name="referrer" content="no-referrer">
 
   <style>
-    :root { --bg: #000; --accent: #E50914; --text: #fff; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; background: var(--bg); overflow: hidden; font-family: sans-serif; }
-    #root { position: fixed; inset: 0; background: #000; }
-    video { width: 100%; height: 100%; background: #000; object-fit: contain; }
+    :root { --bg: #000; --accent: #E50914; --gold: #FFD700; --text: #fff; }
+    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+    html, body { width: 100%; height: 100%; background: var(--bg); overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    
+    #root { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; }
+    video { width: 100%; height: 100%; background: #000; object-fit: contain; z-index: 1; }
 
+    /* المؤشرات */
     #loading, #buffering {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      border-radius: 50%; pointer-events: none; display: none; z-index: 30;
+      border-radius: 50%; pointer-events: none; display: none; z-index: 100;
     }
-    #loading { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,.18); border-top-color: var(--accent); animation: spin 1s linear infinite; }
-    #buffering { width: 84px; height: 84px; border: 6px solid rgba(255,255,255,.18); border-top-color: var(--accent); animation: spin 1s linear infinite; }
-
+    #loading { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,.1); border-top-color: var(--gold); animation: spin 1s linear infinite; }
+    #buffering { width: 80px; height: 80px; border: 5px solid rgba(255,255,255,.1); border-top-color: var(--accent); animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-    #error {
-      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
-      flex-direction: column; gap: 12px; text-align: center; z-index: 50; background: rgba(0,0,0,.88); color: #fff; padding: 20px;
-    }
-    #error h2 { font-size: 18px; }
-    #error p { font-size: 14px; opacity: .9; max-width: 360px; line-height: 1.6; }
-    button {
-      border: 0; background: var(--accent); color: #fff; padding: 10px 18px; border-radius: 999px;
-      font-weight: 700; cursor: pointer;
-    }
-
+    /* نظام التحكم */
     #controls {
-      position: absolute; inset: 0; z-index: 20; pointer-events: none;
-      opacity: 0; transition: opacity .2s ease;
-      background: linear-gradient(to top, rgba(0,0,0,.75), transparent 28%, transparent 72%, rgba(0,0,0,.55));
+      position: absolute; inset: 0; z-index: 80; pointer-events: none;
+      opacity: 0; transition: opacity .4s ease;
+      background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.7) 100%);
     }
     #controls.show { opacity: 1; pointer-events: auto; }
 
+    /* الشريط العلوي */
     #topBar {
-      position: absolute; top: 0; left: 0; right: 0; padding: 12px 14px; color: #fff;
+      position: absolute; top: 0; left: 0; right: 0; padding: 20px; color: #fff;
       display: flex; align-items: center; justify-content: space-between;
-      background: linear-gradient(to bottom, rgba(0,0,0,.72), transparent);
     }
-    #title { font-size: 15px; font-weight: 700; max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #title { font-size: 17px; font-weight: 700; text-shadow: 0 2px 4px #000; max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    #bottomBar {
-      position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px 14px;
-      color: #fff;
-    }
+    /* الشريط السفلي */
+    #bottomBar { position: absolute; left: 0; right: 0; bottom: 0; padding: 15px 25px 30px; }
+    
+    /* شريط التقديم */
     #progressWrap {
-      width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,.22);
-      overflow: hidden; cursor: pointer; position: relative;
+      width: 100%; height: 6px; border-radius: 10px; background: rgba(255,255,255,.2);
+      overflow: hidden; cursor: pointer; position: relative; margin-bottom: 15px;
     }
-    #progressFill { position: absolute; inset: 0 auto 0 0; width: 0%; background: var(--accent); }
-    #row {
-      margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      font-size: 13px;
-    }
-    #buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-    .mini {
-      width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14);
-      color: #fff;
-    }
-    #menu {
-      position: absolute; bottom: 78px; left: 14px; min-width: 180px; display: none; z-index: 40;
-      background: rgba(10,10,10,.9); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 6px;
-    }
-    #menu.show { display: block; }
-    .item {
-      width: 100%; padding: 10px 12px; border-radius: 10px; text-align: right; background: transparent; color: #fff;
-      border: 0; cursor: pointer; font-size: 13px;
-    }
-    .item:hover { background: rgba(255,255,255,.08); }
-    .item.active { background: rgba(255,255,255,.14); color: #FFD700; font-weight: 700; }
+    #progressFill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
 
-    @media (max-width: 420px) {
-      #title { max-width: 62vw; }
-      .mini { width: 34px; height: 34px; }
+    /* صف الأزرار */
+    #row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    #buttons-left, #buttons-right { display: flex; gap: 12px; align-items: center; }
+    
+    .mini {
+      width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.1); 
+      border: 2px solid transparent; color: #fff; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px);
+    }
+    .mini svg { width: 22px; height: 22px; stroke-width: 2.5; }
+
+    /* تأثير التركيز للريموت */
+    .mini:focus, .mini:hover {
+      border-color: var(--gold);
+      background: rgba(255, 215, 0, 0.2);
+      transform: scale(1.15);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+    }
+
+    #time { color: #fff; font-size: 14px; font-weight: 600; opacity: 0.9; min-width: 100px; text-align: center; direction: ltr; }
+
+    /* القائمة */
+    #menu {
+      position: absolute; bottom: 100px; right: 25px; min-width: 180px; display: none; z-index: 120;
+      background: rgba(15,15,15,0.95); border: 1px solid rgba(255,215,0,0.3); border-radius: 15px; padding: 8px;
+      backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    #menu.show { display: flex; flex-direction: column; }
+    .item {
+      width: 100%; padding: 12px; border-radius: 10px; text-align: right; background: transparent; color: #fff;
+      border: 1px solid transparent; cursor: pointer; font-size: 14px; margin-bottom: 4px;
+    }
+    .item:focus, .item:hover { background: rgba(255,215,0,0.1); border-color: var(--gold); color: var(--gold); }
+    .item.active { background: rgba(255,215,0,0.2); color: var(--gold); font-weight: 700; }
+
+    /* تعديلات للهاتف */
+    @media (max-width: 480px) {
+      #bottomBar { padding: 10px 15px 20px; }
+      .mini { width: 36px; height: 36px; }
+      .mini svg { width: 18px; height: 18px; }
+      #row { flex-wrap: nowrap; }
+      #time { font-size: 12px; min-width: 80px; }
     }
   </style>
 </head>
@@ -92,30 +103,29 @@
     <div id="loading"></div>
     <div id="buffering"></div>
 
-    <div id="error">
-      <h2 id="errTitle">خطأ في التشغيل</h2>
-      <p id="errMsg">تعذر تشغيل البث.</p>
-      <button id="retry">إعادة المحاولة</button>
-    </div>
-
     <div id="controls">
       <div id="topBar">
-        <div id="title">APiX Web Player Pro</div>
-        <button class="mini" id="menuBtn">⚙</button>
+        <div id="title">APiX Player Pro</div>
+        <button class="mini focusable" onclick="window.history.back()"><i data-feather="arrow-left"></i></button>
       </div>
 
       <div id="bottomBar">
         <div id="progressWrap"><div id="progressFill"></div></div>
         <div id="row">
-          <div id="buttons">
-            <button class="mini" id="back10">⟲</button>
-            <button class="mini" id="playPause">⏯</button>
-            <button class="mini" id="fwd10">⟳</button>
-            <button class="mini" id="mute">🔊</button>
-            <button class="mini" id="fit">⤢</button>
-            <button class="mini" id="qualityBtn">HD</button>
+          <div id="buttons-left">
+            <button class="mini focusable" id="back10"><i data-feather="rotate-ccw"></i></button>
+            <button class="mini focusable" id="playPause"><i data-feather="pause"></i></button>
+            <button class="mini focusable" id="fwd10"><i data-feather="rotate-cw"></i></button>
           </div>
+          
           <div id="time">00:00 • 00:00</div>
+
+          <div id="buttons-right">
+            <button class="mini focusable" id="mute"><i data-feather="volume-2"></i></button>
+            <button class="mini focusable" id="fit"><i data-feather="maximize"></i></button>
+            <button class="mini focusable" id="qualityBtn"><i data-feather="settings"></i></button>
+            <button class="mini focusable" id="fullScr"><i data-feather="screen"></i></button>
+          </div>
         </div>
       </div>
 
@@ -125,13 +135,10 @@
 
   <script>
     (() => {
+      feather.replace(); // تشغيل الأيقونات
       const video = document.getElementById('video');
       const loading = document.getElementById('loading');
       const buffering = document.getElementById('buffering');
-      const errorBox = document.getElementById('error');
-      const errTitle = document.getElementById('errTitle');
-      const errMsg = document.getElementById('errMsg');
-      const retryBtn = document.getElementById('retry');
       const controls = document.getElementById('controls');
       const titleEl = document.getElementById('title');
       const timeEl = document.getElementById('time');
@@ -143,17 +150,15 @@
       let hideTimer = null;
       let fitMode = 0;
 
-      function qs(name) {
-        return new URLSearchParams(location.search).get(name) || '';
-      }
+      function qs(name) { return new URLSearchParams(location.search).get(name) || ''; }
 
       function parseClearKey(ck) {
         if (!ck || !ck.includes(':')) return null;
         const [kidRaw, keyRaw] = ck.split(':');
-        const kid = kidRaw.trim().toLowerCase().replace(/[^a-f0-9]/g, '');
-        const key = keyRaw.trim().toLowerCase().replace(/[^a-f0-9]/g, '');
-        if (kid.length !== 32 || key.length !== 32) return null;
-        return { kid, key };
+        return { 
+          kid: kidRaw.trim().toLowerCase().replace(/[^a-f0-9]/g, ''), 
+          key: keyRaw.trim().toLowerCase().replace(/[^a-f0-9]/g, '') 
+        };
       }
 
       function fmt(sec) {
@@ -161,78 +166,61 @@
         const s = Math.floor(sec % 60).toString().padStart(2, '0');
         const m = Math.floor((sec / 60) % 60).toString().padStart(2, '0');
         const h = Math.floor(sec / 3600);
-        return h > 0 ? `${h.toString().padStart(2, '0')}:${m}:${s}` : `${m}:${s}`;
-      }
-
-      function showError(title, message) {
-        loading.style.display = 'none';
-        buffering.style.display = 'none';
-        errorBox.style.display = 'flex';
-        errTitle.textContent = title;
-        errMsg.textContent = message;
-      }
-
-      function hideError() {
-        errorBox.style.display = 'none';
+        return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
       }
 
       function showControls() {
         controls.classList.add('show');
         clearTimeout(hideTimer);
         hideTimer = setTimeout(() => {
-          if (!video.paused) controls.classList.remove('show');
-          menu.classList.remove('show');
-        }, 3000);
+          if (!video.paused) {
+             controls.classList.remove('show');
+             menu.classList.remove('show');
+          }
+        }, 4000);
       }
 
       function togglePlay() {
-        if (video.paused) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
+        if (video.paused) video.play().catch(() => {});
+        else video.pause();
       }
 
+      video.onplay = () => { document.getElementById('playPause').innerHTML = feather.icons.pause.toSvg(); };
+      video.onpause = () => { document.getElementById('playPause').innerHTML = feather.icons.play.toSvg(); };
+
       function setFit() {
+        const modes = ['contain', 'cover', 'fill'];
         fitMode = (fitMode + 1) % 3;
-        video.style.objectFit = ['contain', 'cover', 'fill'][fitMode];
+        video.style.objectFit = modes[fitMode];
       }
 
       function updateTime() {
-        const d = video.duration || 0;
-        const c = video.currentTime || 0;
-        if (d > 0 && isFinite(d)) {
-          const pct = Math.max(0, Math.min(100, (c / d) * 100));
-          progressFill.style.width = pct + '%';
+        const d = video.duration || 0, c = video.currentTime || 0;
+        if (d > 0) {
+          progressFill.style.width = (c / d * 100) + '%';
           timeEl.textContent = `${fmt(c)} • ${fmt(d)}`;
-        } else if (player && player.isLive && player.isLive()) {
+        } else if (player?.isLive()) {
           timeEl.textContent = 'LIVE';
           progressFill.style.width = '100%';
         }
       }
 
       function buildMenu() {
-        const tracks = (player?.getVariantTracks?.() || []).filter(t => t.height);
+        const tracks = player.getVariantTracks().filter(t => t.height);
         const uniq = [...new Set(tracks.map(t => t.height))].sort((a, b) => b - a);
-
-        menu.innerHTML = '';
+        menu.innerHTML = '<div style="color:#888;font-size:11px;text-align:center;padding:5px;">الجودة</div>';
+        
         const auto = document.createElement('button');
-        auto.className = 'item';
-        auto.textContent = 'تلقائي';
-        auto.onclick = () => {
-          player.configure({ abr: { enabled: true } });
-          menu.classList.remove('show');
-        };
+        auto.className = 'item focusable'; auto.textContent = 'تلقائي';
+        auto.onclick = () => { player.configure({ abr: { enabled: true } }); menu.classList.remove('show'); };
         menu.appendChild(auto);
 
         uniq.forEach(h => {
           const b = document.createElement('button');
-          b.className = 'item';
-          b.textContent = `${h}p`;
+          b.className = 'item focusable'; b.textContent = `${h}p`;
           b.onclick = () => {
             player.configure({ abr: { enabled: false } });
-            const track = player.getVariantTracks().find(t => t.height === h);
-            if (track) player.selectVariantTrack(track, true);
+            player.selectVariantTrack(player.getVariantTracks().find(t => t.height === h), true);
             menu.classList.remove('show');
           };
           menu.appendChild(b);
@@ -240,123 +228,60 @@
       }
 
       async function init() {
-        hideError();
-
-        const url = qs('url');
-        const ck = qs('ck');
-        const title = qs('title') || 'APiX Web Player Pro';
-
+        const url = qs('url'), ck = qs('ck'), title = qs('title') || 'APiX Stream';
         titleEl.textContent = title;
-
-        if (!url) {
-          showError('رابط مفقود', 'مرر الرابط داخل ?url=');
-          return;
-        }
+        if (!url) return;
 
         loading.style.display = 'block';
-        buffering.style.display = 'none';
-
         shaka.polyfill.installAll();
+        player = new shaka.Player(video);
 
-        if (!shaka.Player.isBrowserSupported()) {
-          showError('المتصفح غير مدعوم', 'هذا المتصفح لا يدعم تشغيل Shaka Player بشكل كافٍ.');
-          return;
-        }
+        player.addEventListener('buffering', (e) => { buffering.style.display = e.buffering ? 'block' : 'none'; });
+
+        const clear = parseClearKey(ck);
+        const config = { streaming: { bufferingGoal: 15 }, drm: {} };
+        if (clear) config.drm.clearKeys = { [clear.kid]: clear.key };
+        player.configure(config);
 
         try {
-          if (player) {
-            try { await player.destroy(); } catch (_) {}
-          }
-
-          player = new shaka.Player(video);
-
-          player.addEventListener('error', (event) => {
-            console.error('Shaka error:', event);
-            showError('خطأ في التشغيل', 'الرابط أو المفاتيح أو الطلبات الشبكية تمنع التشغيل.');
-          });
-
-          player.addEventListener('buffering', (e) => {
-            buffering.style.display = e.buffering ? 'block' : 'none';
-          });
-
-          const config = {
-            streaming: {
-              bufferingGoal: 20,
-              rebufferingGoal: 8,
-              bufferBehind: 30
-            },
-            drm: {}
-          };
-
-          const clear = parseClearKey(ck);
-          if (clear) {
-            config.drm.clearKeys = { [clear.kid]: clear.key };
-          }
-
-          player.configure(config);
-
-          const net = player.getNetworkingEngine();
-          net.registerRequestFilter((type, request) => {
-            // ضع الهيدرز هنا فقط إذا كان المصدر الذي تملكه/تُصرّح له يحتاجها.
-            // مثال:
-            // request.headers['Authorization'] = 'Bearer ...';
-            // request.headers['Referer'] = 'https://example.com/';
-            // request.headers['Origin'] = 'https://example.com';
-            // request.headers['User-Agent'] = navigator.userAgent;
-          });
-
-          video.muted = true;
           await player.load(url);
-
           loading.style.display = 'none';
-          buffering.style.display = 'none';
-          video.play().catch(() => {});
+          video.play();
           buildMenu();
           showControls();
-        } catch (e) {
-          console.error(e);
-          showError('فشل التحميل', 'تحقق من الرابط، وClearKey، وأي هيدرز مطلوبة.');
-        }
+        } catch (e) { loading.style.display = 'none'; }
       }
 
-      video.addEventListener('timeupdate', updateTime);
-      video.addEventListener('play', showControls);
-      video.addEventListener('pause', showControls);
-
+      // الأحداث
       document.getElementById('playPause').onclick = togglePlay;
-      document.getElementById('back10').onclick = () => { video.currentTime = Math.max(0, video.currentTime - 10); showControls(); };
+      document.getElementById('back10').onclick = () => { video.currentTime -= 10; showControls(); };
       document.getElementById('fwd10').onclick = () => { video.currentTime += 10; showControls(); };
       document.getElementById('mute').onclick = () => {
         video.muted = !video.muted;
-        document.getElementById('mute').textContent = video.muted ? '🔇' : '🔊';
+        document.getElementById('mute').innerHTML = feather.icons[video.muted ? 'volume-x' : 'volume-2'].toSvg();
         showControls();
       };
       document.getElementById('fit').onclick = () => { setFit(); showControls(); };
       document.getElementById('qualityBtn').onclick = () => { menu.classList.toggle('show'); showControls(); };
-      document.getElementById('menuBtn').onclick = () => { menu.classList.toggle('show'); showControls(); };
-      document.getElementById('retry').onclick = init;
+      document.getElementById('fullScr').onclick = () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      };
 
-      progressWrap.addEventListener('click', (e) => {
-        const dur = video.duration || 0;
-        if (!(dur > 0 && isFinite(dur))) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const ratio = (e.clientX - rect.left) / rect.width;
-        video.currentTime = Math.max(0, Math.min(dur, ratio * dur));
-        showControls();
-      });
-
+      video.addEventListener('timeupdate', updateTime);
+      
+      // دعم الريموت
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') video.currentTime = Math.max(0, video.currentTime - 10);
-        if (e.key === 'ArrowRight') video.currentTime += 10;
-        if (e.key === 'Enter') togglePlay();
-        if (e.key === 'Escape') menu.classList.remove('show');
         showControls();
+        const f = Array.from(document.querySelectorAll('.focusable'));
+        let i = f.indexOf(document.activeElement);
+        if (e.key === 'ArrowRight') { i = (i + 1) % f.length; f[i].focus(); e.preventDefault(); }
+        else if (e.key === 'ArrowLeft') { i = (i - 1 + f.length) % f.length; f[i].focus(); e.preventDefault(); }
+        else if (e.key === 'Enter') { if(document.activeElement) document.activeElement.click(); }
       });
 
       document.addEventListener('mousemove', showControls);
       document.addEventListener('touchstart', showControls);
-      document.addEventListener('click', showControls);
-
       init();
     })();
   </script>
