@@ -1,156 +1,364 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>APiX Player Fixed</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>APiX Web Player Pro</title>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.13/shaka-player.compiled.js"></script>
+  <meta name="referrer" content="no-referrer">
+
   <style>
-    :root{ --gold: #FFD700; --red: #E50914; }
-    *{ box-sizing:border-box; margin:0; padding:0; outline:none; -webkit-tap-highlight-color:transparent; }
-    body, html{ width:100%; height:100%; background:#000; overflow:hidden; font-family:sans-serif; }
-    #wrapper{ position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
-    video{ width:100%; height:100%; object-fit:contain; }
+    :root { --bg: #000; --accent: #E50914; --text: #fff; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; background: var(--bg); overflow: hidden; font-family: sans-serif; }
+    #root { position: fixed; inset: 0; background: #000; }
+    video { width: 100%; height: 100%; background: #000; object-fit: contain; }
 
-    /* دائرة التحميل */
-    #loader{ position:absolute; z-index:90; width:45px; height:45px; border:4px solid rgba(255,255,255,.2); border-top-color:var(--gold); border-radius:50%; animation:spin 1s linear infinite; display:none; }
-    @keyframes spin { to { transform:rotate(360deg); } }
+    #loading, #buffering {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      border-radius: 50%; pointer-events: none; display: none; z-index: 30;
+    }
+    #loading { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,.18); border-top-color: var(--accent); animation: spin 1s linear infinite; }
+    #buffering { width: 84px; height: 84px; border: 6px solid rgba(255,255,255,.18); border-top-color: var(--accent); animation: spin 1s linear infinite; }
 
-    /* الواجهة */
-    #ui{ position:absolute; inset:0; z-index:80; display:flex; flex-direction:column; justify-content:space-between; opacity:0; transition:0.3s; pointer-events:none; background:rgba(0,0,0,0.3); }
-    #ui.visible{ opacity:1; pointer-events:auto; }
+    @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-    .top{ padding:15px; text-align:center; background:linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); }
-    .title{ color:#fff; font-size:16px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #error {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px; text-align: center; z-index: 50; background: rgba(0,0,0,.88); color: #fff; padding: 20px;
+    }
+    #error h2 { font-size: 18px; }
+    #error p { font-size: 14px; opacity: .9; max-width: 360px; line-height: 1.6; }
+    button {
+      border: 0; background: var(--accent); color: #fff; padding: 10px 18px; border-radius: 999px;
+      font-weight: 700; cursor: pointer;
+    }
 
-    .bottom{ padding:10px 15px 20px; background:linear-gradient(to top, rgba(0,0,0,0.8), transparent); }
-    
-    /* شريط الوقت - مرن */
-    .prog-row{ display:flex; align-items:center; gap:8px; margin-bottom:10px; color:#fff; font-size:12px; }
-    .prog-bg{ flex:1; height:5px; background:rgba(255,255,255,0.2); border-radius:10px; position:relative; cursor:pointer; overflow:hidden; }
-    #prog-fill{ position:absolute; height:100%; width:0%; background:var(--gold); }
+    #controls {
+      position: absolute; inset: 0; z-index: 20; pointer-events: none;
+      opacity: 0; transition: opacity .2s ease;
+      background: linear-gradient(to top, rgba(0,0,0,.75), transparent 28%, transparent 72%, rgba(0,0,0,.55));
+    }
+    #controls.show { opacity: 1; pointer-events: auto; }
 
-    .btns{ display:flex; align-items:center; justify-content:space-between; flex-wrap:nowrap; }
-    .group{ display:flex; align-items:center; gap:8px; }
+    #topBar {
+      position: absolute; top: 0; left: 0; right: 0; padding: 12px 14px; color: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(to bottom, rgba(0,0,0,.72), transparent);
+    }
+    #title { font-size: 15px; font-weight: 700; max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* الأزرار - حجم مرن للهاتف */
-    .btn{ background:transparent; border:2px solid transparent; color:#fff; cursor:pointer; border-radius:50%; width:38px; height:38px; display:flex; align-items:center; justify-content:center; transition:0.2s; }
-    .btn svg{ width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; }
-    
-    /* تأثير الريموت الذهبي */
-    .btn:focus, .btn:hover{ border-color:var(--gold); background:rgba(255,215,0,0.15); transform:scale(1.1); }
-    
-    .menu{ position:absolute; bottom:80px; left:15px; background:#111; border:1px solid var(--gold); border-radius:10px; padding:5px; display:none; flex-direction:column; min-width:140px; }
-    .menu.show{ display:flex; }
-    .m-item{ background:transparent; border:1px solid transparent; color:#fff; padding:10px; text-align:right; font-size:13px; border-radius:5px; cursor:pointer; }
-    .m-item:focus, .m-item:hover{ background:rgba(255,215,0,0.1); border-color:var(--gold); color:var(--gold); }
+    #bottomBar {
+      position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px 14px;
+      color: #fff;
+    }
+    #progressWrap {
+      width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,.22);
+      overflow: hidden; cursor: pointer; position: relative;
+    }
+    #progressFill { position: absolute; inset: 0 auto 0 0; width: 0%; background: var(--accent); }
+    #row {
+      margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      font-size: 13px;
+    }
+    #buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .mini {
+      width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14);
+      color: #fff;
+    }
+    #menu {
+      position: absolute; bottom: 78px; left: 14px; min-width: 180px; display: none; z-index: 40;
+      background: rgba(10,10,10,.9); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 6px;
+    }
+    #menu.show { display: block; }
+    .item {
+      width: 100%; padding: 10px 12px; border-radius: 10px; text-align: right; background: transparent; color: #fff;
+      border: 0; cursor: pointer; font-size: 13px;
+    }
+    .item:hover { background: rgba(255,255,255,.08); }
+    .item.active { background: rgba(255,255,255,.14); color: #FFD700; font-weight: 700; }
 
-    /* تصغير الأزرار في الهواتف الصغيرة جداً */
-    @media (max-width: 400px) { .group{ gap:4px; } .btn{ width:32px; height:32px; } .btn svg{ width:18px; height:18px; } }
+    @media (max-width: 420px) {
+      #title { max-width: 62vw; }
+      .mini { width: 34px; height: 34px; }
+    }
   </style>
 </head>
 <body>
+  <div id="root">
+    <video id="video" playsinline autoplay></video>
 
-<div id="wrapper">
-  <video id="vid" playsinline autoplay></video>
-  <div id="loader"></div>
+    <div id="loading"></div>
+    <div id="buffering"></div>
 
-  <div id="ui">
-    <div class="top"><div class="title" id="t-text">APiX Player</div></div>
-
-    <div class="bottom">
-      <div class="prog-row" id="p-row">
-        <span id="c-time">00:00</span>
-        <div class="prog-bg" id="p-bg"><div id="prog-fill"></div></div>
-        <span id="d-time">00:00</span>
-      </div>
-
-      <div class="btns">
-        <div class="group">
-          <button class="btn focusable" onclick="seek(-10)"><svg viewBox="0 0 24 24"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button>
-          <button class="btn focusable" id="playBtn" onclick="toggleP()"><svg id="ic-p" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>
-          <button class="btn focusable" onclick="seek(10)"><svg viewBox="0 0 24 24"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg></button>
-        </div>
-        <div class="group">
-          <button class="btn focusable" onclick="toggleM()"><svg id="ic-m" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>
-          <button class="btn focusable" onclick="tMenu('q-m')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3"/></svg></button>
-          <button class="btn focusable" onclick="tFit()"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
-          <button class="btn focusable" onclick="tFS()"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
-        </div>
-      </div>
+    <div id="error">
+      <h2 id="errTitle">خطأ في التشغيل</h2>
+      <p id="errMsg">تعذر تشغيل البث.</p>
+      <button id="retry">إعادة المحاولة</button>
     </div>
-    <div id="q-m" class="menu"></div>
+
+    <div id="controls">
+      <div id="topBar">
+        <div id="title">APiX Web Player Pro</div>
+        <button class="mini" id="menuBtn">⚙</button>
+      </div>
+
+      <div id="bottomBar">
+        <div id="progressWrap"><div id="progressFill"></div></div>
+        <div id="row">
+          <div id="buttons">
+            <button class="mini" id="back10">⟲</button>
+            <button class="mini" id="playPause">⏯</button>
+            <button class="mini" id="fwd10">⟳</button>
+            <button class="mini" id="mute">🔊</button>
+            <button class="mini" id="fit">⤢</button>
+            <button class="mini" id="qualityBtn">HD</button>
+          </div>
+          <div id="time">00:00 • 00:00</div>
+        </div>
+      </div>
+
+      <div id="menu"></div>
+    </div>
   </div>
-</div>
 
-<script>
-  let player, hideT;
-  const vid = document.getElementById('vid'), ui = document.getElementById('ui'), loader = document.getElementById('loader');
+  <script>
+    (() => {
+      const video = document.getElementById('video');
+      const loading = document.getElementById('loading');
+      const buffering = document.getElementById('buffering');
+      const errorBox = document.getElementById('error');
+      const errTitle = document.getElementById('errTitle');
+      const errMsg = document.getElementById('errMsg');
+      const retryBtn = document.getElementById('retry');
+      const controls = document.getElementById('controls');
+      const titleEl = document.getElementById('title');
+      const timeEl = document.getElementById('time');
+      const progressFill = document.getElementById('progressFill');
+      const progressWrap = document.getElementById('progressWrap');
+      const menu = document.getElementById('menu');
 
-  function parseCK(s){
-    if(!s || !s.includes(':')) return null;
-    const p = s.split(':');
-    return { kid: p[0].trim().toLowerCase().replace(/[^a-f0-9]/g,''), key: p[1].trim().toLowerCase().replace(/[^a-f0-9]/g,'') };
-  }
+      let player = null;
+      let hideTimer = null;
+      let fitMode = 0;
 
-  async function init(){
-    const p = new URLSearchParams(window.location.search);
-    const url = p.get('url'), ck = p.get('ck'), title = p.get('title') || "Stream";
-    document.getElementById('t-text').innerText = title;
-    loader.style.display = 'block';
+      function qs(name) {
+        return new URLSearchParams(location.search).get(name) || '';
+      }
 
-    shaka.polyfill.installAll();
-    player = new shaka.Player(vid);
-    const drm = parseCK(ck);
-    if(drm) player.configure({ drm: { clearKeys: { [drm.kid]: drm.key } } });
+      function parseClearKey(ck) {
+        if (!ck || !ck.includes(':')) return null;
+        const [kidRaw, keyRaw] = ck.split(':');
+        const kid = kidRaw.trim().toLowerCase().replace(/[^a-f0-9]/g, '');
+        const key = keyRaw.trim().toLowerCase().replace(/[^a-f0-9]/g, '');
+        if (kid.length !== 32 || key.length !== 32) return null;
+        return { kid, key };
+      }
 
-    try {
-      await player.load(url);
-      loader.style.display = 'none';
-      vid.play();
-      showUi();
-      const tr = player.getVariantTracks().filter(t=>t.height).sort((a,b)=>b.height-a.height);
-      const m = document.getElementById('q-m');
-      m.innerHTML = '<button class="m-item focusable" onclick="setQ(null)">تلقائي</button>';
-      [...new Set(tr.map(t=>t.height))].forEach(h => m.innerHTML += `<button class="m-item focusable" onclick="setQ(${h})">${h}p</button>`);
-      if(player.isLive()) document.getElementById('p-row').style.display='none';
-    } catch(e) { loader.style.display='none'; }
-  }
+      function fmt(sec) {
+        if (!isFinite(sec) || sec < 0) return '00:00';
+        const s = Math.floor(sec % 60).toString().padStart(2, '0');
+        const m = Math.floor((sec / 60) % 60).toString().padStart(2, '0');
+        const h = Math.floor(sec / 3600);
+        return h > 0 ? `${h.toString().padStart(2, '0')}:${m}:${s}` : `${m}:${s}`;
+      }
 
-  window.setQ = (h) => {
-    if(!h) player.configure({abr:{enabled:true}});
-    else { player.configure({abr:{enabled:false}}); player.selectVariantTrack(player.getVariantTracks().find(t=>t.height===h),true); }
-    tMenu(null);
-  };
-  function tMenu(id){ document.querySelectorAll('.menu').forEach(m=>m.classList.remove('show')); if(id) document.getElementById(id).classList.add('show'); }
-  function toggleP(){ if(vid.paused) vid.play(); else vid.pause(); }
-  vid.onplay = () => document.getElementById('ic-p').innerHTML = '<path d="M6 7h4v10H6zm8 0h4v10h-4z"/>';
-  vid.onpause = () => document.getElementById('ic-p').innerHTML = '<path d="M8 5v14l11-7z"/>';
-  function seek(s){ vid.currentTime += s; showUi(); }
-  function toggleM(){ vid.muted = !vid.muted; }
-  function tFS(){ if(!document.fullscreenElement) document.getElementById('wrapper').requestFullscreen(); else document.exitFullscreen(); }
-  let fm=0; function tFit(){ const m=['contain','cover','fill']; fm=(fm+1)%3; vid.style.objectFit=m[fm]; }
+      function showError(title, message) {
+        loading.style.display = 'none';
+        buffering.style.display = 'none';
+        errorBox.style.display = 'flex';
+        errTitle.textContent = title;
+        errMsg.textContent = message;
+      }
 
-  function showUi(){ ui.classList.add('visible'); clearTimeout(hideT); hideT = setTimeout(()=> { if(!vid.paused) ui.classList.remove('visible'); tMenu(null); }, 4000); }
-  vid.ontimeupdate = () => {
-    const c=vid.currentTime, d=vid.duration;
-    if(d>0){ document.getElementById('c-time').innerText=fmt(c); document.getElementById('d-time').innerText=fmt(d); document.getElementById('prog-fill').style.width=(c/d*100)+'%'; }
-  };
-  function fmt(s){ const m=Math.floor(s/60), v=Math.floor(s%60); return m.toString().padStart(2,'0')+":"+v.toString().padStart(2,'0'); }
-  
-  // نظام ريموت آمن
-  document.addEventListener('keydown', (e) => {
-    showUi();
-    const f = Array.from(document.querySelectorAll('.focusable'));
-    let i = f.indexOf(document.activeElement);
-    if(e.key==='ArrowRight') { i=(i+1)%f.length; f[i].focus(); e.preventDefault(); }
-    if(e.key==='ArrowLeft') { i=(i-1+f.length)%f.length; f[i].focus(); e.preventDefault(); }
-    if(e.key==='Enter' && document.activeElement) document.activeElement.click();
-  });
+      function hideError() {
+        errorBox.style.display = 'none';
+      }
 
-  document.addEventListener('mousemove', showUi);
-  document.addEventListener('touchstart', showUi);
-  init();
-</script>
+      function showControls() {
+        controls.classList.add('show');
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          if (!video.paused) controls.classList.remove('show');
+          menu.classList.remove('show');
+        }, 3000);
+      }
+
+      function togglePlay() {
+        if (video.paused) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      }
+
+      function setFit() {
+        fitMode = (fitMode + 1) % 3;
+        video.style.objectFit = ['contain', 'cover', 'fill'][fitMode];
+      }
+
+      function updateTime() {
+        const d = video.duration || 0;
+        const c = video.currentTime || 0;
+        if (d > 0 && isFinite(d)) {
+          const pct = Math.max(0, Math.min(100, (c / d) * 100));
+          progressFill.style.width = pct + '%';
+          timeEl.textContent = `${fmt(c)} • ${fmt(d)}`;
+        } else if (player && player.isLive && player.isLive()) {
+          timeEl.textContent = 'LIVE';
+          progressFill.style.width = '100%';
+        }
+      }
+
+      function buildMenu() {
+        const tracks = (player?.getVariantTracks?.() || []).filter(t => t.height);
+        const uniq = [...new Set(tracks.map(t => t.height))].sort((a, b) => b - a);
+
+        menu.innerHTML = '';
+        const auto = document.createElement('button');
+        auto.className = 'item';
+        auto.textContent = 'تلقائي';
+        auto.onclick = () => {
+          player.configure({ abr: { enabled: true } });
+          menu.classList.remove('show');
+        };
+        menu.appendChild(auto);
+
+        uniq.forEach(h => {
+          const b = document.createElement('button');
+          b.className = 'item';
+          b.textContent = `${h}p`;
+          b.onclick = () => {
+            player.configure({ abr: { enabled: false } });
+            const track = player.getVariantTracks().find(t => t.height === h);
+            if (track) player.selectVariantTrack(track, true);
+            menu.classList.remove('show');
+          };
+          menu.appendChild(b);
+        });
+      }
+
+      async function init() {
+        hideError();
+
+        const url = qs('url');
+        const ck = qs('ck');
+        const title = qs('title') || 'APiX Web Player Pro';
+
+        titleEl.textContent = title;
+
+        if (!url) {
+          showError('رابط مفقود', 'مرر الرابط داخل ?url=');
+          return;
+        }
+
+        loading.style.display = 'block';
+        buffering.style.display = 'none';
+
+        shaka.polyfill.installAll();
+
+        if (!shaka.Player.isBrowserSupported()) {
+          showError('المتصفح غير مدعوم', 'هذا المتصفح لا يدعم تشغيل Shaka Player بشكل كافٍ.');
+          return;
+        }
+
+        try {
+          if (player) {
+            try { await player.destroy(); } catch (_) {}
+          }
+
+          player = new shaka.Player(video);
+
+          player.addEventListener('error', (event) => {
+            console.error('Shaka error:', event);
+            showError('خطأ في التشغيل', 'الرابط أو المفاتيح أو الطلبات الشبكية تمنع التشغيل.');
+          });
+
+          player.addEventListener('buffering', (e) => {
+            buffering.style.display = e.buffering ? 'block' : 'none';
+          });
+
+          const config = {
+            streaming: {
+              bufferingGoal: 20,
+              rebufferingGoal: 8,
+              bufferBehind: 30
+            },
+            drm: {}
+          };
+
+          const clear = parseClearKey(ck);
+          if (clear) {
+            config.drm.clearKeys = { [clear.kid]: clear.key };
+          }
+
+          player.configure(config);
+
+          const net = player.getNetworkingEngine();
+          net.registerRequestFilter((type, request) => {
+            // ضع الهيدرز هنا فقط إذا كان المصدر الذي تملكه/تُصرّح له يحتاجها.
+            // مثال:
+            // request.headers['Authorization'] = 'Bearer ...';
+            // request.headers['Referer'] = 'https://example.com/';
+            // request.headers['Origin'] = 'https://example.com';
+            // request.headers['User-Agent'] = navigator.userAgent;
+          });
+
+          video.muted = true;
+          await player.load(url);
+
+          loading.style.display = 'none';
+          buffering.style.display = 'none';
+          video.play().catch(() => {});
+          buildMenu();
+          showControls();
+        } catch (e) {
+          console.error(e);
+          showError('فشل التحميل', 'تحقق من الرابط، وClearKey، وأي هيدرز مطلوبة.');
+        }
+      }
+
+      video.addEventListener('timeupdate', updateTime);
+      video.addEventListener('play', showControls);
+      video.addEventListener('pause', showControls);
+
+      document.getElementById('playPause').onclick = togglePlay;
+      document.getElementById('back10').onclick = () => { video.currentTime = Math.max(0, video.currentTime - 10); showControls(); };
+      document.getElementById('fwd10').onclick = () => { video.currentTime += 10; showControls(); };
+      document.getElementById('mute').onclick = () => {
+        video.muted = !video.muted;
+        document.getElementById('mute').textContent = video.muted ? '🔇' : '🔊';
+        showControls();
+      };
+      document.getElementById('fit').onclick = () => { setFit(); showControls(); };
+      document.getElementById('qualityBtn').onclick = () => { menu.classList.toggle('show'); showControls(); };
+      document.getElementById('menuBtn').onclick = () => { menu.classList.toggle('show'); showControls(); };
+      document.getElementById('retry').onclick = init;
+
+      progressWrap.addEventListener('click', (e) => {
+        const dur = video.duration || 0;
+        if (!(dur > 0 && isFinite(dur))) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const ratio = (e.clientX - rect.left) / rect.width;
+        video.currentTime = Math.max(0, Math.min(dur, ratio * dur));
+        showControls();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') video.currentTime = Math.max(0, video.currentTime - 10);
+        if (e.key === 'ArrowRight') video.currentTime += 10;
+        if (e.key === 'Enter') togglePlay();
+        if (e.key === 'Escape') menu.classList.remove('show');
+        showControls();
+      });
+
+      document.addEventListener('mousemove', showControls);
+      document.addEventListener('touchstart', showControls);
+      document.addEventListener('click', showControls);
+
+      init();
+    })();
+  </script>
 </body>
 </html>
