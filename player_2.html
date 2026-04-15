@@ -10,137 +10,103 @@
     :root { --gold: #FFD700; --red: #E50914; }
     * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; margin: 0; padding: 0; }
     html, body { width: 100vw; height: 100vh; background: #000; overflow: hidden; font-family: sans-serif; }
-    #player-wrapper { position: relative; width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; }
-    video { width: 100%; height: 100%; object-fit: contain; z-index: 1; }
+    #player-root { position: relative; width: 100%; height: 100%; background: #000; }
+    video { width: 100%; height: 100%; object-fit: contain; }
 
     /* دائرة التحميل */
     .spinner {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 50px; height: 50px; border: 4px solid rgba(229, 9, 20, 0.2);
+      width: 44px; height: 44px; border: 3px solid rgba(229, 9, 20, 0.2);
       border-top-color: var(--red); border-radius: 50%; animation: spin 1s linear infinite;
       display: none; z-index: 50;
     }
     @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-    /* طبقة واجهة المستخدم - تصميم جيت باك كمبوز */
+    /* واجهة التحكم - تصميم Jetpack Compose */
     #ui-layer {
       position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between;
-      z-index: 20; transition: opacity 0.4s ease; opacity: 0; pointer-events: none;
+      z-index: 20; transition: opacity 0.3s ease; opacity: 0; pointer-events: none;
     }
     #ui-layer.visible { opacity: 1; pointer-events: auto; }
 
-    /* الشريط العلوي */
-    .top-bar {
-      background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-      padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;
-    }
-    .stream-title { color: #fff; font-size: 17px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    .top-bar { background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .stream-title { color: #fff; font-size: 16px; font-weight: bold; }
 
-    /* الشريط السفلي */
-    .bottom-bar {
-      background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-      padding: 10px 20px 20px 20px;
-    }
+    .bottom-bar { background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 10px 16px 20px 16px; }
     
-    /* سكايلر الوقت */
-    .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .time-txt { color: #fff; font-size: 13px; min-width: 40px; text-align: center; }
+    /* شريط التقديم الأحمر */
+    .progress-row { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 14px; margin-bottom: 10px; }
     input[type=range] {
-      flex: 1; -webkit-appearance: none; background: rgba(255,255,255,0.2);
-      height: 6px; border-radius: 3px; outline: none;
+      flex: 1; -webkit-appearance: none; background: rgba(255,255,255,0.2); height: 12px; border-radius: 6px; outline: none;
       background-image: linear-gradient(var(--red), var(--red)); background-size: 0% 100%; background-repeat: no-repeat;
     }
     input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; cursor: pointer; }
 
-    /* توزيع الأزرار */
+    /* توزيع الأزرار - مطابق لتطبيقك */
     .controls-row { display: flex; justify-content: space-between; align-items: center; }
-    .left-side, .right-side { display: flex; align-items: center; gap: 14px; }
+    .left-btns, .right-btns { display: flex; align-items: center; gap: 16px; }
 
-    .btn {
-      background: transparent; border: 2px solid transparent; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; border-radius: 50%;
-      transition: all 0.2s ease;
-    }
-    .btn svg { fill: transparent; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; width: 26px; height: 26px; }
+    .btn { background: transparent; border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.2s; }
+    .btn svg { fill: transparent; stroke: #fff; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; width: 26px; height: 26px; }
     
-    /* أحجام خاصة */
-    .btn-play { width: 46px; height: 46px; } .btn-play svg { width: 30px; height: 30px; }
-    .btn-sm { width: 34px; height: 34px; } .btn-sm svg { width: 20px; height: 20px; }
+    .btn-big { width: 44px; height: 44px; } .btn-big svg { width: 30px; height: 30px; }
+    .btn-sm { width: 34px; height: 34px; } .btn-sm svg { width: 22px; height: 22px; }
 
-    /* تأثير التركيز (تلفاز + ماوس) */
-    .btn:focus, .btn:hover {
-      border-color: var(--gold); background: rgba(255, 215, 0, 0.15);
-      transform: scale(1.1);
-    }
-    .btn:focus svg, .btn:hover svg { stroke: var(--gold); }
+    /* تأثير الريموت */
+    .focusable:focus, .btn:hover { border-color: var(--gold); transform: scale(1.1); background: rgba(255,255,255,0.1); }
+    .focusable:focus svg, .btn:hover svg { stroke: var(--gold); }
 
-    /* القوائم المنبثقة */
+    /* القوائم */
     .menu {
-      position: absolute; bottom: 90px; right: 20px; background: #121212;
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; min-width: 200px;
-      display: none; flex-direction: column; padding: 10px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      position: absolute; bottom: 85px; right: 16px; background: #111;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; min-width: 180px;
+      display: none; flex-direction: column; padding: 8px; z-index: 100;
     }
     .menu.visible { display: flex; }
-    .m-item {
-      background: transparent; color: #fff; border: none; padding: 12px 15px; text-align: left;
-      font-size: 14px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between;
-    }
-    .m-item:focus, .m-item:hover, .m-item.active { background: rgba(255,255,255,0.05); color: var(--gold); }
-    .m-header { color: var(--gold); font-size: 12px; font-weight: bold; padding: 5px 15px 10px; border-bottom: 1px solid #222; margin-bottom: 5px; text-align: center; }
-
-    #toast {
-      position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.8); color: var(--gold); padding: 8px 20px; border-radius: 30px;
-      font-weight: bold; display: none; z-index: 200;
-    }
+    .m-item { background: transparent; color: #fff; border: none; padding: 12px; text-align: left; font-size: 14px; border-radius: 8px; cursor: pointer; }
+    .m-item:focus, .m-item.active { background: rgba(255,255,255,0.1); color: var(--gold); }
   </style>
 </head>
 <body>
 
-<div id="player-wrapper">
+<div id="player-root">
   <video id="video" playsinline autoplay></video>
   <div id="spinner" class="spinner"></div>
-  <div id="toast"></div>
 
   <div id="ui-layer">
     <div class="top-bar">
-      <button class="btn btn-sm" onclick="history.back()"><svg viewBox="0 0 24 24"><path d="M19 12H5 M12 19l-7-7 7-7"/></svg></button>
-      <div class="stream-title" id="streamTitle">APiX Pro Player</div>
-      <div style="width: 34px;"></div>
+      <button class="btn btn-sm focusable" onclick="history.back()"><svg viewBox="0 0 24 24"><path d="M19 12H5 M12 19l-7-7 7-7"/></svg></button>
+      <div class="stream-title" id="stTitle">APiX Player 2</div>
     </div>
 
     <div class="bottom-bar">
       <div class="progress-row">
-        <span class="time-txt" id="currTime">00:00</span>
-        <input type="range" id="seekBar" value="0" min="0" step="1">
-        <span class="time-txt" id="totalTime">00:00</span>
+        <span id="curTime">00:00</span>
+        <input type="range" id="skBar" value="0" step="1">
+        <span id="durTime">00:00</span>
       </div>
 
       <div class="controls-row">
-        <div class="left-side">
-          <button class="btn" onclick="seek(-10)"><svg viewBox="0 0 24 24"><path d="M15 7l-5 5 5 5 M9 7l-5 5 5 5"/></svg></button>
-          <button class="btn btn-play" id="playBtn" onclick="togglePlay()">
-            <svg id="p-pause" viewBox="0 0 24 24"><path d="M6 7h4v10H6zm8 0h4v10h-4z"/></svg>
-            <svg id="p-play" viewBox="0 0 24 24" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
+        <div class="left-btns">
+          <button class="btn btn-sm focusable" onclick="seek(-10)"><svg viewBox="0 0 24 24"><path d="M15 7l-5 5 5 5 M9 7l-5 5 5 5"/></svg></button>
+          <button class="btn btn-big focusable" id="plBtn" onclick="togglePlay()">
+            <svg id="ic-pause" viewBox="0 0 24 24"><path d="M6 7h4v10H6zm8 0h4v10h-4z"/></svg>
+            <svg id="ic-play" viewBox="0 0 24 24" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
           </button>
-          <button class="btn" onclick="seek(10)"><svg viewBox="0 0 24 24"><path d="M9 7l5 5-5 5 M15 7l5 5-5 5"/></svg></button>
+          <button class="btn btn-sm focusable" onclick="seek(10)"><svg viewBox="0 0 24 24"><path d="M9 7l5 5-5 5 M15 7l5 5-5 5"/></svg></button>
         </div>
 
-        <div class="right-side">
-          <button class="btn btn-sm" onclick="toggleMute()" id="muteBtn"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path id="v-waves" d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
-          <button class="btn btn-sm" onclick="showMenu('subs-menu')"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
-          <button class="btn btn-sm" onclick="showMenu('audio-menu')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/></svg></button>
-          <button class="btn btn-sm" onclick="showMenu('q-menu')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3 1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8 1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></button>
-          <button class="btn btn-sm" onclick="toggleFit()"><svg viewBox="0 0 24 24"><path d="M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7"/></svg></button>
-          <button class="btn btn-sm" onclick="toggleFS()"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+        <div class="right-btns">
+          <button class="btn btn-sm focusable" onclick="toggleMute()" id="mtBtn"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path id="v-waves" d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
+          <button class="btn btn-sm focusable" onclick="toggleMenu('q-menu')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3 1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8 1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></button>
+          <button class="btn btn-sm focusable" onclick="toggleFit()"><svg viewBox="0 0 24 24"><path d="M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7"/></svg></button>
+          <button class="btn btn-sm focusable" onclick="toggleFS()"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
         </div>
       </div>
     </div>
   </div>
 
   <div id="q-menu" class="menu"></div>
-  <div id="audio-menu" class="menu"></div>
-  <div id="subs-menu" class="menu"></div>
 </div>
 
 <script>
@@ -150,28 +116,34 @@
   const ui = document.getElementById('ui-layer');
   let hideTimeout;
 
-  // الدالة المنقذة من مشغل 1 (تنظيف المفاتيح)
+  // نفس دالة مشغل 1 تماماً (السر هنا)
   function parseCK(s) {
     if(!s || !s.includes(':')) return null;
     const p = s.split(':');
-    return { kid: p[0].trim().toLowerCase().replace(/[^a-f0-9]/g,''), key: p[1].trim().toLowerCase().replace(/[^a-f0-9]/g,'') };
+    return { 
+      kid: p[0].trim().toLowerCase().replace(/[^a-f0-9]/g,''), 
+      key: p[1].trim().toLowerCase().replace(/[^a-f0-9]/g,'') 
+    };
   }
 
   async function init() {
-    const p = new URLSearchParams(window.location.search);
-    const url = p.get('url'), ck = p.get('ck'), title = p.get('title') || "Stream";
+    const params = new URLSearchParams(window.location.search);
+    const url = params.get('url'), ck = params.get('ck'), title = params.get('title') || "APiX Stream";
+    
     if(!url) return;
-
-    document.getElementById('streamTitle').innerText = title;
+    document.getElementById('stTitle').innerText = title;
     spinner.style.display = 'block';
 
     shaka.polyfill.installAll();
     player = new shaka.Player(video);
     
+    // الحقن الإجباري قبل التحميل
     const cp = parseCK(ck);
-    if(cp) player.configure({ drm: { clearKeys: { [cp.kid]: cp.key } } });
+    if(cp) {
+      player.configure({ drm: { clearKeys: { [cp.kid]: cp.key } } });
+    }
 
-    player.addEventListener('error', () => spinner.style.display='none');
+    player.addEventListener('error', (e) => { console.error(e); spinner.style.display='none'; });
     video.addEventListener('waiting', () => spinner.style.display='block');
     video.addEventListener('playing', () => spinner.style.display='none');
 
@@ -180,79 +152,57 @@
       spinner.style.display = 'none';
       video.play();
       showUi();
-      buildMenus();
+      buildQMenu();
     } catch(e) { spinner.style.display='none'; }
   }
 
-  function buildMenus() {
-    // Quality
-    const qm = document.getElementById('q-menu');
-    const tracks = player.getVariantTracks();
-    const heights = [...new Set(tracks.filter(t=>t.height).map(t=>t.height))].sort((a,b)=>b-a);
-    qm.innerHTML = '<div class="m-header">الجودة</div><button class="m-item active" onclick="setQ(null, this)">تلقائي</button>';
-    heights.forEach(h => qm.innerHTML += `<button class="m-item" onclick="setQ(${h}, this)">${h}p</button>`);
-
-    // Audio
-    const am = document.getElementById('audio-menu');
-    const langs = player.getAudioLanguages();
-    am.innerHTML = '<div class="m-header">اللغة</div>';
-    langs.forEach(l => am.innerHTML += `<button class="m-item" onclick="setAud('${l}', this)">${l.toUpperCase()}</button>`);
-
-    // Subs
-    const sm = document.getElementById('subs-menu');
-    const texts = player.getTextTracks();
-    sm.innerHTML = '<div class="m-header">الترجمة</div><button class="m-item active" onclick="setSub(null, this)">إيقاف</button>';
-    texts.forEach(t => sm.innerHTML += `<button class="m-item" onclick="setSub('${t.language}', this)">${t.language.toUpperCase()}</button>`);
+  function buildQMenu() {
+    const m = document.getElementById('q-menu');
+    const tracks = player.getVariantTracks().filter(t => t.height).sort((a,b) => b.height - a.height);
+    const heights = [...new Set(tracks.map(t => t.height))];
+    m.innerHTML = '<button class="m-item active" onclick="setQ(null, this)">تلقائي</button>';
+    heights.forEach(h => m.innerHTML += `<button class="m-item" onclick="setQ(${h}, this)">${h}p</button>`);
   }
 
   window.setQ = (h, el) => {
     if(!h) player.configure({abr:{enabled:true}});
     else { player.configure({abr:{enabled:false}}); player.selectVariantTrack(player.getVariantTracks().find(t=>t.height===h), true); }
-    closeMenus(); toast("الجودة: " + el.innerText);
+    document.querySelectorAll('.m-item').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('q-menu').classList.remove('visible');
   };
-  window.setAud = (l, el) => { player.selectAudioLanguage(l); closeMenus(); toast("الصوت: " + l.toUpperCase()); };
-  window.setSub = (l, el) => { if(!l) player.setTextTrackVisibility(false); else { player.selectTextLanguage(l); player.setTextTrackVisibility(true); } closeMenus(); };
 
-  function showMenu(id) { 
-    const m = document.getElementById(id); 
-    const isV = m.style.display === 'flex';
-    closeMenus(); 
-    if(!isV) m.style.display = 'flex'; 
-  }
-  function closeMenus() { document.querySelectorAll('.menu').forEach(m => m.style.display='none'); }
-
-  function togglePlay() {
-    if(video.paused) { video.play(); document.getElementById('p-play').style.display='none'; document.getElementById('p-pause').style.display='block'; }
-    else { video.pause(); document.getElementById('p-play').style.display='block'; document.getElementById('p-pause').style.display='none'; }
+  function toggleMenu(id) { document.getElementById(id).classList.toggle('visible'); }
+  function togglePlay() { 
+    if(video.paused) { video.play(); document.getElementById('ic-play').style.display='none'; document.getElementById('ic-pause').style.display='block'; }
+    else { video.pause(); document.getElementById('ic-play').style.display='block'; document.getElementById('ic-pause').style.display='none'; }
   }
   function seek(s) { video.currentTime += s; showUi(); }
   function toggleMute() { video.muted = !video.muted; document.getElementById('v-waves').style.display = video.muted ? 'none' : 'block'; }
   function toggleFS() { if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
   let fm = 0;
-  function toggleFit() { fm = (fm+1)%3; video.style.objectFit = fm===0?'contain':fm===1?'fill':'cover'; toast(fm===0?'ملاءمة':fm===1?'تمدد':'تكبير'); }
+  function toggleFit() { fm=(fm+1)%3; video.style.objectFit=fm===0?'contain':fm===1?'fill':'cover'; }
   
-  function toast(m) { const t = document.getElementById('toast'); t.innerText=m; t.style.display='block'; setTimeout(()=>t.style.display='none', 2000); }
-  function showUi() { ui.classList.add('visible'); clearTimeout(hideTimeout); hideTimeout = setTimeout(()=> { if(!video.paused) ui.classList.remove('visible'); closeMenus(); }, 4000); }
+  function showUi() { 
+    ui.classList.add('visible'); 
+    clearTimeout(hideTimeout); 
+    hideTimeout = setTimeout(() => { if(!video.paused) ui.classList.remove('visible'); }, 4000); 
+  }
 
   video.addEventListener('timeupdate', () => {
-    const c = video.currentTime, d = video.duration;
-    document.getElementById('currTime').innerText = fmt(c);
-    document.getElementById('totalTime').innerText = fmt(d);
-    const s = document.getElementById('seekBar'); s.max = d; s.value = c;
-    if(d > 0) s.style.backgroundSize = (c/d*100)+'% 100%';
+    const cur = video.currentTime, dur = video.duration;
+    if(dur > 0) {
+      document.getElementById('curTime').innerText = fmt(cur);
+      document.getElementById('durTime').innerText = fmt(dur);
+      const sk = document.getElementById('skBar'); sk.max = dur; sk.value = cur;
+      sk.style.backgroundSize = (cur/dur*100)+'% 100%';
+    }
   });
 
-  function fmt(s) { if(isNaN(s)) return "00:00"; const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), v=Math.floor(s%60); return (h>0?h+":":"")+m.toString().padStart(2,'0')+":"+v.toString().padStart(2,'0'); }
+  function fmt(s) { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), v=Math.floor(s%60); return (h>0?h+":":"")+m.toString().padStart(2,'0')+":"+v.toString().padStart(2,'0'); }
+  document.getElementById('skBar').oninput = (e) => video.currentTime = e.target.value;
+  document.addEventListener('mousemove', showUi); document.addEventListener('touchstart', showUi);
   
-  document.getElementById('seekBar').oninput = (e) => video.currentTime = e.target.value;
-  document.getElementById('player-wrapper').onclick = showUi;
-  document.addEventListener('keydown', (e) => {
-    showUi();
-    if(e.key === 'Enter') togglePlay();
-    if(e.key === 'ArrowRight') seek(10);
-    if(e.key === 'ArrowLeft') seek(-10);
-  });
-
   init();
 </script>
 </body>
