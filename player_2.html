@@ -3,135 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>APiX Player Pro</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <title>APiX Player Fixed</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.13/shaka-player.compiled.js"></script>
-
   <style>
     :root{ --gold: #FFD700; --red: #E50914; }
-    *{ box-sizing:border-box; user-select: none !important; -webkit-user-select: none !important; outline: none; }
-    html,body{ margin:0; padding:0; width:100%; height:100%; background:#000; font-family:'Tajawal', sans-serif; overflow:hidden; }
-    
-    #player-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; }
-    video{ width:100%; height:100%; object-fit: contain; z-index: 1; }
+    *{ box-sizing:border-box; margin:0; padding:0; outline:none; -webkit-tap-highlight-color:transparent; }
+    body, html{ width:100%; height:100%; background:#000; overflow:hidden; font-family:sans-serif; }
+    #wrapper{ position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+    video{ width:100%; height:100%; object-fit:contain; }
 
     /* دائرة التحميل */
-    #loading-spinner{
-      position:absolute; z-index:100; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:50px; height:50px; border:4px solid rgba(255,255,255,.2); border-top-color:var(--gold);
-      border-radius:50%; animation:spin 1s linear infinite; display:none;
-    }
-    @keyframes spin { to { transform:translate(-50%,-50%) rotate(360deg); } }
+    #loader{ position:absolute; z-index:90; width:45px; height:45px; border:4px solid rgba(255,255,255,.2); border-top-color:var(--gold); border-radius:50%; animation:spin 1s linear infinite; display:none; }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
     /* الواجهة */
-    #controls-overlay{
-      position:absolute; inset:0; z-index:70; display:flex; flex-direction:column; justify-content:space-between;
-      background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.4) 100%);
-      opacity:0; transition: opacity 0.3s; pointer-events: none;
-    }
-    #controls-overlay.visible { opacity: 1; pointer-events: auto; }
+    #ui{ position:absolute; inset:0; z-index:80; display:flex; flex-direction:column; justify-content:space-between; opacity:0; transition:0.3s; pointer-events:none; background:rgba(0,0,0,0.3); }
+    #ui.visible{ opacity:1; pointer-events:auto; }
 
-    .top-bar{ padding: 20px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); text-align: center; }
-    .stream-title{ color:#fff; font-size:18px; font-weight:700; text-shadow: 0 2px 4px #000; }
+    .top{ padding:15px; text-align:center; background:linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); }
+    .title{ color:#fff; font-size:16px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-    .bottom-bar{ padding: 10px 20px 25px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); }
+    .bottom{ padding:10px 15px 20px; background:linear-gradient(to top, rgba(0,0,0,0.8), transparent); }
+    
+    /* شريط الوقت - مرن */
+    .prog-row{ display:flex; align-items:center; gap:8px; margin-bottom:10px; color:#fff; font-size:12px; }
+    .prog-bg{ flex:1; height:5px; background:rgba(255,255,255,0.2); border-radius:10px; position:relative; cursor:pointer; overflow:hidden; }
+    #prog-fill{ position:absolute; height:100%; width:0%; background:var(--gold); }
 
-    /* شريط الوقت */
-    .progress-row{ display:flex; align-items:center; gap:12px; margin-bottom:12px; color:#fff; font-size:14px; direction: ltr; }
-    .progress-wrapper{ flex:1; height:6px; background:rgba(255,255,255,0.2); border-radius:10px; position:relative; cursor:pointer; overflow: hidden; }
-    #progress-played{ position:absolute; left:0; top:0; bottom:0; width:0%; background:var(--gold); }
+    .btns{ display:flex; align-items:center; justify-content:space-between; flex-wrap:nowrap; }
+    .group{ display:flex; align-items:center; gap:8px; }
 
-    .actions-row{ display:flex; align-items:center; justify-content:space-between; }
-    .left-side, .right-side { display:flex; align-items:center; gap:18px; }
+    /* الأزرار - حجم مرن للهاتف */
+    .btn{ background:transparent; border:2px solid transparent; color:#fff; cursor:pointer; border-radius:50%; width:38px; height:38px; display:flex; align-items:center; justify-content:center; transition:0.2s; }
+    .btn svg{ width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; }
+    
+    /* تأثير الريموت الذهبي */
+    .btn:focus, .btn:hover{ border-color:var(--gold); background:rgba(255,215,0,0.15); transform:scale(1.1); }
+    
+    .menu{ position:absolute; bottom:80px; left:15px; background:#111; border:1px solid var(--gold); border-radius:10px; padding:5px; display:none; flex-direction:column; min-width:140px; }
+    .menu.show{ display:flex; }
+    .m-item{ background:transparent; border:1px solid transparent; color:#fff; padding:10px; text-align:right; font-size:13px; border-radius:5px; cursor:pointer; }
+    .m-item:focus, .m-item:hover{ background:rgba(255,215,0,0.1); border-color:var(--gold); color:var(--gold); }
 
-    /* الأزرار ودعم الريموت */
-    .icon-btn{
-      background:transparent; border:2px solid transparent; color:#fff; cursor:pointer;
-      border-radius:50%; padding:8px; display:flex; align-items:center; justify-content:center;
-      transition: 0.2s;
-    }
-    /* تأثير ذهبي عند التركيز بالريموت */
-    .icon-btn:focus, .icon-btn:hover {
-      border-color: var(--gold); background: rgba(255, 215, 0, 0.15);
-      box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); transform: scale(1.1);
-    }
-    .icon-btn i{ width:26px; height:26px; }
-
-    /* القوائم المنبثقة */
-    .menu-popup{
-      position:absolute; bottom:90px; left:20px; background:rgba(15,15,15,0.98);
-      border:1px solid rgba(255,215,0,0.3); border-radius:12px; min-width:180px;
-      display:none; flex-direction:column; padding:10px; z-index:110; backdrop-filter: blur(10px);
-    }
-    .menu-popup.visible{ display:flex; }
-    .menu-item{
-      background:transparent; color:#fff; border:2px solid transparent; padding:12px;
-      text-align:right; font-family:'Tajawal', sans-serif; font-size:14px;
-      border-radius:8px; cursor:pointer; margin-bottom:4px; display:flex; justify-content:space-between;
-    }
-    .menu-item:focus, .menu-item:hover, .menu-item.active {
-      background:rgba(255,215,0,0.1); border-color:var(--gold); color:var(--gold); font-weight:bold;
-    }
-    .menu-header { color: #888; font-size: 11px; text-align: center; padding-bottom: 8px; border-bottom: 1px solid #333; margin-bottom: 8px; }
+    /* تصغير الأزرار في الهواتف الصغيرة جداً */
+    @media (max-width: 400px) { .group{ gap:4px; } .btn{ width:32px; height:32px; } .btn svg{ width:18px; height:18px; } }
   </style>
 </head>
-
 <body>
-<div id="player-container">
-  <video id="video" playsinline autoplay></video>
-  <div id="loading-spinner"></div>
 
-  <div id="controls-overlay">
-    <div class="top-bar">
-      <div class="stream-title" id="streamTitle">APiX Stream</div>
-    </div>
+<div id="wrapper">
+  <video id="vid" playsinline autoplay></video>
+  <div id="loader"></div>
 
-    <div class="bottom-bar">
-      <div class="progress-row" id="timeRow">
-        <span id="curTime">00:00</span>
-        <div class="progress-wrapper" id="progressWrapper">
-          <div id="progress-played"></div>
-        </div>
-        <span id="durTime">00:00</span>
+  <div id="ui">
+    <div class="top"><div class="title" id="t-text">APiX Player</div></div>
+
+    <div class="bottom">
+      <div class="prog-row" id="p-row">
+        <span id="c-time">00:00</span>
+        <div class="prog-bg" id="p-bg"><div id="prog-fill"></div></div>
+        <span id="d-time">00:00</span>
       </div>
 
-      <div class="actions-row">
-        <div class="left-side">
-          <button class="icon-btn focusable" onclick="seek(-10)"><i data-feather="rotate-ccw"></i></button>
-          <button class="icon-btn focusable" id="mainPlayBtn" onclick="togglePlay()"><i data-feather="pause"></i></button>
-          <button class="icon-btn focusable" onclick="seek(10)"><i data-feather="rotate-cw"></i></button>
+      <div class="btns">
+        <div class="group">
+          <button class="btn focusable" onclick="seek(-10)"><svg viewBox="0 0 24 24"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button>
+          <button class="btn focusable" id="playBtn" onclick="toggleP()"><svg id="ic-p" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>
+          <button class="btn focusable" onclick="seek(10)"><svg viewBox="0 0 24 24"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg></button>
         </div>
-
-        <div class="right-side">
-          <button class="icon-btn focusable" onclick="toggleMute()" id="muteBtn"><i data-feather="volume-2"></i></button>
-          <button class="icon-btn focusable" onclick="toggleMenu('q-menu')"><i data-feather="settings"></i></button>
-          <button class="icon-btn focusable" onclick="toggleMenu('a-menu')"><i data-feather="globe"></i></button>
-          <button class="icon-btn focusable" onclick="toggleFit()"><i data-feather="maximize"></i></button>
-          <button class="icon-btn focusable" onclick="toggleFullscreen()"><i data-feather="screen"></i></button>
+        <div class="group">
+          <button class="btn focusable" onclick="toggleM()"><svg id="ic-m" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>
+          <button class="btn focusable" onclick="tMenu('q-m')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3"/></svg></button>
+          <button class="btn focusable" onclick="tFit()"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+          <button class="btn focusable" onclick="tFS()"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
         </div>
       </div>
     </div>
-
-    <div id="q-menu" class="menu-popup"><div class="menu-header">دقة الفيديو</div></div>
-    <div id="a-menu" class="menu-popup"><div class="menu-header">لغة الصوت</div></div>
+    <div id="q-m" class="menu"></div>
   </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', async () => {
-  feather.replace();
+  let player, hideT;
+  const vid = document.getElementById('vid'), ui = document.getElementById('ui'), loader = document.getElementById('loader');
 
-  const video = document.getElementById('video');
-  const spinner = document.getElementById('loading-spinner');
-  const overlay = document.getElementById('controls-overlay');
-  let player = null;
-  let hideTimeout = null;
-
-  // السر في فك التشفير (نفس كودك الأصلي)
   function parseCK(s){
     if(!s || !s.includes(':')) return null;
     const p = s.split(':');
@@ -140,129 +95,62 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function init(){
     const p = new URLSearchParams(window.location.search);
-    const url = p.get('url'), ck = p.get('ck'), title = p.get('title') || "APiX Stream";
-    document.getElementById('streamTitle').innerText = title;
+    const url = p.get('url'), ck = p.get('ck'), title = p.get('title') || "Stream";
+    document.getElementById('t-text').innerText = title;
+    loader.style.display = 'block';
 
-    spinner.style.display = 'block';
     shaka.polyfill.installAll();
-    player = new shaka.Player(video);
-
+    player = new shaka.Player(vid);
     const drm = parseCK(ck);
     if(drm) player.configure({ drm: { clearKeys: { [drm.kid]: drm.key } } });
 
     try {
       await player.load(url);
-      spinner.style.display = 'none';
-      video.play();
+      loader.style.display = 'none';
+      vid.play();
       showUi();
-      buildMenus();
-      if(player.isLive()) document.getElementById('timeRow').style.display = 'none';
-    } catch(e) { spinner.style.display = 'none'; }
+      const tr = player.getVariantTracks().filter(t=>t.height).sort((a,b)=>b.height-a.height);
+      const m = document.getElementById('q-m');
+      m.innerHTML = '<button class="m-item focusable" onclick="setQ(null)">تلقائي</button>';
+      [...new Set(tr.map(t=>t.height))].forEach(h => m.innerHTML += `<button class="m-item focusable" onclick="setQ(${h})">${h}p</button>`);
+      if(player.isLive()) document.getElementById('p-row').style.display='none';
+    } catch(e) { loader.style.display='none'; }
   }
 
-  function buildMenus(){
-    const qMenu = document.getElementById('q-menu');
-    const tracks = player.getVariantTracks().filter(t => t.height).sort((a,b) => b.height - a.height);
-    const heights = [...new Set(tracks.map(t => t.height))];
-    qMenu.innerHTML = '<div class="menu-header">دقة الفيديو</div><button class="menu-item focusable active" onclick="setQ(null, this)">تلقائي</button>';
-    heights.forEach(h => qMenu.innerHTML += `<button class="menu-item focusable" onclick="setQ(${h}, this)">${h}p</button>`);
-
-    const aMenu = document.getElementById('a-menu');
-    const langs = player.getAudioLanguages();
-    aMenu.innerHTML = '<div class="menu-header">لغة الصوت</div>';
-    langs.forEach(l => aMenu.innerHTML += `<button class="menu-item focusable" onclick="setAudio('${l}', this)">${l.toUpperCase()}</button>`);
-  }
-
-  window.setQ = (h, el) => {
+  window.setQ = (h) => {
     if(!h) player.configure({abr:{enabled:true}});
-    else { player.configure({abr:{enabled:false}}); player.selectVariantTrack(player.getVariantTracks().find(t=>t.height===h), true); }
-    toggleMenu(null);
+    else { player.configure({abr:{enabled:false}}); player.selectVariantTrack(player.getVariantTracks().find(t=>t.height===h),true); }
+    tMenu(null);
   };
-  window.setAudio = (l, el) => { player.selectAudioLanguage(l); toggleMenu(null); };
+  function tMenu(id){ document.querySelectorAll('.menu').forEach(m=>m.classList.remove('show')); if(id) document.getElementById(id).classList.add('show'); }
+  function toggleP(){ if(vid.paused) vid.play(); else vid.pause(); }
+  vid.onplay = () => document.getElementById('ic-p').innerHTML = '<path d="M6 7h4v10H6zm8 0h4v10h-4z"/>';
+  vid.onpause = () => document.getElementById('ic-p').innerHTML = '<path d="M8 5v14l11-7z"/>';
+  function seek(s){ vid.currentTime += s; showUi(); }
+  function toggleM(){ vid.muted = !vid.muted; }
+  function tFS(){ if(!document.fullscreenElement) document.getElementById('wrapper').requestFullscreen(); else document.exitFullscreen(); }
+  let fm=0; function tFit(){ const m=['contain','cover','fill']; fm=(fm+1)%3; vid.style.objectFit=m[fm]; }
 
-  window.toggleMenu = (id) => {
-    const wasVisible = id ? document.getElementById(id).classList.contains('visible') : false;
-    document.querySelectorAll('.menu-popup').forEach(m => m.classList.remove('visible'));
-    if(id && !wasVisible) {
-      const menu = document.getElementById(id);
-      menu.classList.add('visible');
-      menu.querySelector('.focusable')?.focus(); // التركيز التلقائي للريموت
-    }
+  function showUi(){ ui.classList.add('visible'); clearTimeout(hideT); hideT = setTimeout(()=> { if(!vid.paused) ui.classList.remove('visible'); tMenu(null); }, 4000); }
+  vid.ontimeupdate = () => {
+    const c=vid.currentTime, d=vid.duration;
+    if(d>0){ document.getElementById('c-time').innerText=fmt(c); document.getElementById('d-time').innerText=fmt(d); document.getElementById('prog-fill').style.width=(c/d*100)+'%'; }
   };
-
-  window.togglePlay = () => { if(video.paused) video.play(); else video.pause(); };
-  video.onplay = () => { document.getElementById('mainPlayBtn').innerHTML = '<i data-feather="pause"></i>'; feather.replace(); };
-  video.onpause = () => { document.getElementById('mainPlayBtn').innerHTML = '<i data-feather="play"></i>'; feather.replace(); };
-
-  window.seek = (s) => video.currentTime += s;
-  window.toggleMute = () => { video.muted = !video.muted; document.getElementById('muteBtn').innerHTML = `<i data-feather="${video.muted?'volume-x':'volume-2'}"></i>`; feather.replace(); };
+  function fmt(s){ const m=Math.floor(s/60), v=Math.floor(s%60); return m.toString().padStart(2,'0')+":"+v.toString().padStart(2,'0'); }
   
-  window.toggleFullscreen = () => {
-    const container = document.getElementById('player-container');
-    if(!document.fullscreenElement) container.requestFullscreen().catch(e => {});
-    else document.exitFullscreen();
-  };
-
-  let fIdx = 0;
-  window.toggleFit = () => {
-    const m = ['fit-contain', 'fit-cover', 'fit-fill'];
-    fIdx = (fIdx + 1) % 3;
-    video.className = m[fIdx];
-  };
-
-  function showUi(){
-    overlay.classList.add('visible');
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => { if(!video.paused) { overlay.classList.remove('visible'); toggleMenu(null); } }, 4500);
-  }
-
-  video.ontimeupdate = () => {
-    const c = video.currentTime, d = video.duration;
-    if(d > 0){
-      document.getElementById('curTime').innerText = fmt(c);
-      document.getElementById('durTime').innerText = fmt(d);
-      document.getElementById('progress-played').style.width = (c/d*100) + '%';
-    }
-  };
-
-  function fmt(s){ if(isNaN(s)) return "00:00"; const m=Math.floor(s/60), v=Math.floor(s%60); return m.toString().padStart(2,'0')+":"+v.toString().padStart(2,'0'); }
-
-  // ==========================================
-  // 🔥 دعم التنقل بالريموت (D-pad Navigation)
-  // ==========================================
+  // نظام ريموت آمن
   document.addEventListener('keydown', (e) => {
     showUi();
-    const focusables = Array.from(document.querySelectorAll('.focusable:not([style*="display: none"])'));
-    let index = focusables.indexOf(document.activeElement);
-
-    if (e.key === 'ArrowRight') {
-      index = (index + 1) % focusables.length;
-      focusables[index].focus();
-      e.preventDefault();
-    } else if (e.key === 'ArrowLeft') {
-      index = (index - 1 + focusables.length) % focusables.length;
-      focusables[index].focus();
-      e.preventDefault();
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-      // التنقل داخل القوائم المنبثقة إذا كانت مفتوحة
-      const activeMenu = document.querySelector('.menu-popup.visible');
-      if(activeMenu) {
-        const items = Array.from(activeMenu.querySelectorAll('.focusable'));
-        let i = items.indexOf(document.activeElement);
-        if(e.key === 'ArrowDown') i = (i + 1) % items.length;
-        else i = (i - 1 + items.length) % items.length;
-        items[i].focus();
-        e.preventDefault();
-      }
-    } else if (e.key === 'Enter') {
-      if(document.activeElement) document.activeElement.click();
-    }
+    const f = Array.from(document.querySelectorAll('.focusable'));
+    let i = f.indexOf(document.activeElement);
+    if(e.key==='ArrowRight') { i=(i+1)%f.length; f[i].focus(); e.preventDefault(); }
+    if(e.key==='ArrowLeft') { i=(i-1+f.length)%f.length; f[i].focus(); e.preventDefault(); }
+    if(e.key==='Enter' && document.activeElement) document.activeElement.click();
   });
 
   document.addEventListener('mousemove', showUi);
   document.addEventListener('touchstart', showUi);
   init();
-});
 </script>
 </body>
 </html>
