@@ -1,81 +1,280 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>APiX JW Fixed</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.13/shaka-player.compiled.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="referrer" content="no-referrer">
+  <title>APiX JW Player Pro</title>
+
+  <script src="https://content.jwplatform.com/libraries/KB5zFt7A.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+
   <style>
-    :root{ --red: #E50914; --gold: #FFD700; }
-    body, html{ margin:0; padding:0; width:100%; height:100%; background:#000; font-family:sans-serif; overflow:hidden; }
-    video{ width:100%; height:100%; object-fit:contain; }
-    #ui{ position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(rgba(0,0,0,0.6), transparent, rgba(0,0,0,0.8)); color:#fff; padding:20px; opacity:0; transition:0.3s; pointer-events:none; }
-    #ui.show{ opacity:1; pointer-events:auto; }
-    .btn-group{ display:flex; gap:15px; align-items:center; justify-content:center; }
-    .btn{ background:rgba(255,255,255,0.1); border:2px solid transparent; color:#fff; border-radius:50%; width:45px; height:45px; cursor:pointer; font-weight:bold; }
-    .btn:focus{ border-color:var(--gold); transform:scale(1.1); }
-    #prog{ height:5px; background:rgba(255,255,255,0.2); width:100%; border-radius:10px; margin-bottom:10px; overflow:hidden; }
-    #fill{ height:100%; width:0%; background:var(--red); }
+    :root { --gold: #FFD700; --red: #E50914; --ui-bg: rgba(0, 0, 0, 0.7); }
+    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; user-select: none; }
+    body, html { width: 100%; height: 100%; background: #000; font-family: 'Cairo', sans-serif; overflow: hidden; }
+    
+    #player-wrapper { position: relative; width: 100%; height: 100%; background: #000; }
+    
+    /* جعل المشغل يغطي المساحة بالكامل */
+    .jwplayer { width: 100% !important; height: 100% !important; }
+    .jw-video { object-fit: contain !important; }
+
+    /* طبقة واجهة المستخدم المخصصة */
+    #custom-ui {
+      position: absolute; inset: 0; z-index: 100; display: flex; flex-direction: column;
+      justify-content: space-between; opacity: 0; transition: opacity 0.4s ease;
+      pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.8) 100%);
+    }
+    #custom-ui.visible { opacity: 1; pointer-events: auto; }
+
+    /* الشريط العلوي */
+    .top-bar { padding: 20px; text-align: center; }
+    #stream-title { color: #fff; font-size: 18px; font-weight: bold; text-shadow: 0 2px 5px #000; }
+
+    /* الشريط السفلي */
+    .bottom-bar { padding: 15px 25px 30px; }
+    
+    /* شريط التقدم */
+    .seek-row { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+    .seek-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.2); border-radius: 10px; position: relative; overflow: hidden; }
+    #seek-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--gold); }
+    .time-txt { color: #fff; font-size: 13px; font-weight: bold; min-width: 45px; text-align: center; }
+
+    /* التحكم بالأزرار */
+    .controls-row { display: flex; align-items: center; justify-content: space-between; }
+    .side-group { display: flex; align-items: center; gap: 20px; }
+
+    .icon-btn {
+      background: rgba(255,255,255,0.1); border: 2px solid transparent; color: #fff;
+      cursor: pointer; border-radius: 50%; width: 45px; height: 45px;
+      display: flex; align-items: center; justify-content: center; transition: 0.2s;
+    }
+    /* تأثير الريموت الذهبي */
+    .icon-btn:focus, .icon-btn:hover {
+      border-color: var(--gold); background: rgba(255, 215, 0, 0.2);
+      transform: scale(1.15); box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+    }
+    .icon-btn i { width: 24px; height: 24px; }
+
+    /* القوائم المنبثقة */
+    .popup-menu {
+      position: absolute; bottom: 100px; right: 25px; background: rgba(15,15,15,0.98);
+      border: 1px solid var(--gold); border-radius: 15px; min-width: 180px;
+      display: none; flex-direction: column; padding: 10px; z-index: 200; backdrop-filter: blur(10px);
+    }
+    .popup-menu.show { display: flex; }
+    .menu-item {
+      background: transparent; color: #fff; border: 1px solid transparent; padding: 12px;
+      text-align: right; font-size: 14px; border-radius: 10px; cursor: pointer;
+      display: flex; justify-content: space-between; margin-bottom: 5px;
+    }
+    .menu-item:focus, .menu-item.active { background: rgba(255,215,0,0.15); border-color: var(--gold); color: var(--gold); }
+
+    /* دائرة التحميل */
+    #loading {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 60px; height: 60px; border: 5px solid rgba(255,255,255,0.1);
+      border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite;
+      z-index: 150; display: none;
+    }
+    @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+    #toast {
+      position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.8); color: var(--gold); padding: 10px 25px;
+      border-radius: 30px; font-weight: bold; display: none; z-index: 300;
+    }
   </style>
 </head>
 <body>
-  <video id="v" autoplay playsinline></video>
-  <div id="ui">
-    <div id="title" style="text-align:center; font-weight:bold;">APiX JW PRO</div>
-    <div class="center-play" style="text-align:center;">
-       <button class="btn focusable" id="pBtn" style="width:70px;height:70px;font-size:20px;">⏸</button>
+
+<div id="player-wrapper">
+  <div id="jwplayerDiv"></div>
+  <div id="loading"></div>
+  <div id="toast"></div>
+
+  <div id="custom-ui">
+    <div class="top-bar">
+      <div id="stream-title">APiX Pro Player</div>
     </div>
-    <div>
-      <div id="prog"><div id="fill"></div></div>
-      <div class="btn-group">
-        <button class="btn focusable" onclick="v.currentTime-=10">⏪</button>
-        <button class="btn focusable" onclick="v.currentTime+=10">⏩</button>
-        <button class="btn focusable" onclick="tFS()">🔳</button>
+
+    <div class="bottom-bar">
+      <div class="seek-row" id="time-container">
+        <span class="time-txt" id="curr-time">00:00</span>
+        <div class="seek-bar"><div id="seek-fill"></div></div>
+        <span class="time-txt" id="dur-time">00:00</span>
+      </div>
+
+      <div class="controls-row">
+        <div class="side-group">
+          <button class="icon-btn focusable" onclick="jwplayer().seek(jwplayer().getPosition()-10)"><i data-feather="rotate-ccw"></i></button>
+          <button class="icon-btn focusable" id="play-pause-btn" onclick="togglePlay()"><i data-feather="pause"></i></button>
+          <button class="icon-btn focusable" onclick="jwplayer().seek(jwplayer().getPosition()+10)"><i data-feather="rotate-cw"></i></button>
+        </div>
+
+        <div class="side-group">
+          <button class="icon-btn focusable" id="mute-btn" onclick="toggleMute()"><i data-feather="volume-2"></i></button>
+          <button class="icon-btn focusable" onclick="toggleMenu('q-menu')"><i data-feather="settings"></i></button>
+          <button class="icon-btn focusable" onclick="toggleFit()"><i data-feather="maximize"></i></button>
+          <button class="icon-btn focusable" onclick="toggleFullscreen()"><i data-feather="screen"></i></button>
+        </div>
       </div>
     </div>
+
+    <div id="q-menu" class="popup-menu"></div>
   </div>
+</div>
 
-  <script>
-    const v = document.getElementById('v'), ui = document.getElementById('ui');
-    let player, hideT;
+<script>
+  feather.replace();
+  let uiTimer;
 
-    function parseCK(s){
-      if(!s || !s.includes(':')) return null;
-      const p = s.split(':');
-      return { kid: p[0].trim().toLowerCase().replace(/[^a-f0-9]/g,''), key: p[1].trim().toLowerCase().replace(/[^a-f0-9]/g,'') };
-    }
+  // دالة جلب البيانات من الرابط (نفس منطق المشغل الناجح)
+  function getParam(n) { return new URLSearchParams(window.location.search).get(n) || ''; }
 
-    async function init(){
-      const p = new URLSearchParams(window.location.search);
-      const url = p.get('url'), ck = p.get('ck'), title = p.get('title');
-      if(title) document.getElementById('title').innerText = title;
+  function parseClearKey(ck) {
+    if (!ck || !ck.includes(':')) return null;
+    const p = ck.split(':');
+    return { 
+      keyId: p[0].trim().toLowerCase().replace(/[^a-f0-9]/g, ''), 
+      key: p[1].trim().toLowerCase().replace(/[^a-f0-9]/g, '') 
+    };
+  }
 
-      shaka.polyfill.installAll();
-      player = new shaka.Player(v);
-      const drm = parseCK(ck);
-      if(drm) player.configure({ drm: { clearKeys: { [drm.kid]: drm.key } } });
-
-      try { await player.load(url); showUi(); } catch(e){}
-    }
-
-    function showUi(){ ui.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(()=>ui.classList.remove('show'), 4000); }
-    v.ontimeupdate = () => document.getElementById('fill').style.width = (v.currentTime/v.duration*100)+'%';
-    document.getElementById('pBtn').onclick = () => { if(v.paused) v.play(); else v.pause(); };
-    v.onplay = () => document.getElementById('pBtn').innerText = '⏸';
-    v.onpause = () => document.getElementById('pBtn').innerText = '▶️';
-    function tFS(){ if(!document.fullscreenElement) document.body.requestFullscreen(); else document.exitFullscreen(); }
+  async function initPlayer() {
+    const url = getParam('url');
+    const ck = getParam('ck');
+    const title = getParam('title') || "APiX Stream";
     
-    document.addEventListener('keydown', (e) => {
-      showUi();
-      const f = Array.from(document.querySelectorAll('.focusable'));
-      let i = f.indexOf(document.activeElement);
-      if(e.key==='ArrowRight') { i=(i+1)%f.length; f[i].focus(); e.preventDefault(); }
-      if(e.key==='ArrowLeft') { i=(i-1+f.length)%f.length; f[i].focus(); e.preventDefault(); }
-      if(e.key==='Enter') document.activeElement.click();
+    if (!url) return;
+    document.getElementById('stream-title').innerText = title;
+    document.getElementById('loading').style.display = 'block';
+
+    const drm = parseClearKey(ck);
+    const config = {
+      file: url,
+      width: "100%",
+      height: "100%",
+      autostart: true,
+      controls: false, // نستخدم واجهتنا الخاصة
+      stretching: "uniform",
+      type: url.includes('.mpd') ? 'dash' : (url.includes('.m3u8') ? 'hls' : 'mp4')
+    };
+
+    if (drm) {
+      config.drm = { clearkey: { keyId: drm.keyId, key: drm.key } };
+    }
+
+    const player = jwplayer("jwplayerDiv").setup(config);
+
+    player.on('ready', () => {
+      document.getElementById('loading').style.display = 'none';
+      showUI();
     });
 
-    document.addEventListener('mousemove', showUi);
-    init();
-  </script>
+    player.on('play', () => {
+      document.getElementById('play-pause-btn').innerHTML = '<i data-feather="pause"></i>';
+      feather.replace();
+      showUI();
+    });
+
+    player.on('pause', () => {
+      document.getElementById('play-pause-btn').innerHTML = '<i data-feather="play"></i>';
+      feather.replace();
+      showUI();
+    });
+
+    player.on('time', (e) => {
+      if (e.duration > 0) {
+        document.getElementById('curr-time').innerText = fmt(e.position);
+        document.getElementById('dur-time').innerText = fmt(e.duration);
+        document.getElementById('seek-fill').style.width = (e.position / e.duration * 100) + '%';
+      } else {
+        document.getElementById('time-container').style.visibility = 'hidden';
+      }
+    });
+
+    player.on('levels', (e) => buildQualityMenu(e.levels));
+    player.on('error', (e) => { console.error(e); document.getElementById('loading').style.display = 'none'; });
+  }
+
+  function buildQualityMenu(lvls) {
+    const m = document.getElementById('q-menu');
+    m.innerHTML = '<div style="color:gray;font-size:10px;text-align:center;margin-bottom:10px;">الجودة</div>';
+    lvls.forEach((l, i) => {
+      m.innerHTML += `<button class="menu-item focusable" onclick="jwplayer().setCurrentQuality(${i});toggleMenu(null)">${l.label}</button>`;
+    });
+  }
+
+  function toggleMenu(id) {
+    const wasVisible = id ? document.getElementById(id).classList.contains('show') : false;
+    document.querySelectorAll('.popup-menu').forEach(m => m.classList.remove('show'));
+    if (id && !wasVisible) {
+      document.getElementById(id).classList.add('show');
+      document.getElementById(id).querySelector('.focusable')?.focus();
+    }
+  }
+
+  function togglePlay() { const p = jwplayer(); if(p.getState()==='playing') p.pause(); else p.play(); }
+  
+  function toggleMute() {
+    const p = jwplayer(); const m = !p.getMute(); p.setMute(m);
+    document.getElementById('mute-btn').innerHTML = `<i data-feather="${m ? 'volume-x' : 'volume-2'}"></i>`;
+    feather.replace();
+  }
+
+  let fitIdx = 0;
+  function toggleFit() {
+    const modes = ['uniform', 'exactfit', 'fill'];
+    const names = ['ملاءمة', 'تمدد', 'تكبير'];
+    fitIdx = (fitIdx + 1) % 3;
+    jwplayer().setStretching(modes[fitIdx]);
+    showToast(names[fitIdx]);
+  }
+
+  function toggleFullscreen() {
+    const el = document.getElementById('player-wrapper');
+    if (!document.fullscreenElement) el.requestFullscreen(); else document.exitFullscreen();
+  }
+
+  function showUI() {
+    const ui = document.getElementById('custom-ui');
+    ui.classList.add('visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(() => { if(jwplayer().getState()==='playing') ui.classList.remove('visible'); }, 4000);
+  }
+
+  function showToast(txt) {
+    const t = document.getElementById('toast'); t.innerText = txt; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 2000);
+  }
+
+  function fmt(s) { const m=Math.floor(s/60), v=Math.floor(s%60); return m.toString().padStart(2,'0')+":"+v.toString().padStart(2,'0'); }
+
+  // دعم الريموت كنترول D-pad
+  document.addEventListener('keydown', (e) => {
+    showUI();
+    const focusables = Array.from(document.querySelectorAll('.focusable'));
+    let idx = focusables.indexOf(document.activeElement);
+    if (e.key === 'ArrowRight') { idx = (idx + 1) % focusables.length; focusables[idx].focus(); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { idx = (idx - 1 + focusables.length) % focusables.length; focusables[idx].focus(); e.preventDefault(); }
+    if (e.key === 'Enter' && document.activeElement) document.activeElement.click();
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      const openMenu = document.querySelector('.popup-menu.show');
+      if (openMenu) {
+        const items = Array.from(openMenu.querySelectorAll('.menu-item'));
+        let i = items.indexOf(document.activeElement);
+        if (e.key === 'ArrowDown') i = (i + 1) % items.length; else i = (i - 1 + items.length) % items.length;
+        items[i].focus(); e.preventDefault();
+      }
+    }
+  });
+
+  document.addEventListener('mousemove', showUI);
+  document.addEventListener('touchstart', showUI);
+  initPlayer();
+</script>
 </body>
 </html>
