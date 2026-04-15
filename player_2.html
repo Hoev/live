@@ -1,209 +1,255 @@
 <!DOCTYPE html>
 <html lang="ar" dir="ltr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>APiX Pro Player</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.13/shaka-player.compiled.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>APiX Player 1 - Enhanced</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.13/shaka-player.compiled.js"></script>
 
-  <style>
-    :root { --gold: #FFD700; --red: #E50914; }
-    * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; margin: 0; padding: 0; }
-    html, body { width: 100vw; height: 100vh; background: #000; overflow: hidden; font-family: sans-serif; }
-    #player-root { position: relative; width: 100%; height: 100%; background: #000; }
-    video { width: 100%; height: 100%; object-fit: contain; }
+    <style>
+        :root { --main-color: #E50914; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; outline: none; }
+        body, html { width: 100%; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
+        
+        #player-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        video { width: 100%; height: 100%; object-fit: contain; }
 
-    /* دائرة التحميل */
-    .spinner {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 44px; height: 44px; border: 3px solid rgba(229, 9, 20, 0.2);
-      border-top-color: var(--red); border-radius: 50%; animation: spin 1s linear infinite;
-      display: none; z-index: 50;
-    }
-    @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+        /* دائرة التحميل */
+        .loading-spinner {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 45px; height: 45px; border: 4px solid rgba(229, 9, 20, 0.2);
+            border-top-color: var(--main-color); border-radius: 50%; animation: spin 1s linear infinite;
+            display: none; z-index: 10;
+        }
+        @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-    /* واجهة التحكم - تصميم Jetpack Compose */
-    #ui-layer {
-      position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between;
-      z-index: 20; transition: opacity 0.3s ease; opacity: 0; pointer-events: none;
-    }
-    #ui-layer.visible { opacity: 1; pointer-events: auto; }
+        /* واجهة التحكم الشفافة */
+        .controls-overlay {
+            position: absolute; inset: 0; z-index: 5;
+            display: flex; flex-direction: column; justify-content: space-between;
+            background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.4) 100%);
+            opacity: 0; transition: opacity 0.3s; pointer-events: none;
+        }
+        .controls-overlay.visible { opacity: 1; pointer-events: auto; }
 
-    .top-bar { background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
-    .stream-title { color: #fff; font-size: 16px; font-weight: bold; }
+        .top-bar { padding: 15px; background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); color: #fff; font-weight: bold; }
+        
+        .bottom-bar {
+            padding: 10px 15px 20px;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        }
 
-    .bottom-bar { background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 10px 16px 20px 16px; }
-    
-    /* شريط التقديم الأحمر */
-    .progress-row { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 14px; margin-bottom: 10px; }
-    input[type=range] {
-      flex: 1; -webkit-appearance: none; background: rgba(255,255,255,0.2); height: 12px; border-radius: 6px; outline: none;
-      background-image: linear-gradient(var(--red), var(--red)); background-size: 0% 100%; background-repeat: no-repeat;
-    }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; cursor: pointer; }
+        /* شريط الوقت */
+        .seek-bar-container { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: #fff; font-size: 13px; }
+        input[type=range] {
+            flex: 1; -webkit-appearance: none; background: rgba(255,255,255,0.3); height: 5px; border-radius: 5px;
+            background-image: linear-gradient(var(--main-color), var(--main-color)); background-size: 0% 100%; background-repeat: no-repeat;
+        }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: #fff; cursor: pointer; }
 
-    /* توزيع الأزرار - مطابق لتطبيقك */
-    .controls-row { display: flex; justify-content: space-between; align-items: center; }
-    .left-btns, .right-btns { display: flex; align-items: center; gap: 16px; }
+        /* الأزرار */
+        .actions { display: flex; align-items: center; justify-content: space-between; }
+        .btns-left, .btns-right { display: flex; align-items: center; gap: 15px; }
+        
+        .icon-btn { background: none; border: none; cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .icon-btn svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .icon-btn:hover { color: var(--main-color); transform: scale(1.1); }
 
-    .btn { background: transparent; border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.2s; }
-    .btn svg { fill: transparent; stroke: #fff; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; width: 26px; height: 26px; }
-    
-    .btn-big { width: 44px; height: 44px; } .btn-big svg { width: 30px; height: 30px; }
-    .btn-sm { width: 34px; height: 34px; } .btn-sm svg { width: 22px; height: 22px; }
-
-    /* تأثير الريموت */
-    .focusable:focus, .btn:hover { border-color: var(--gold); transform: scale(1.1); background: rgba(255,255,255,0.1); }
-    .focusable:focus svg, .btn:hover svg { stroke: var(--gold); }
-
-    /* القوائم */
-    .menu {
-      position: absolute; bottom: 85px; right: 16px; background: #111;
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; min-width: 180px;
-      display: none; flex-direction: column; padding: 8px; z-index: 100;
-    }
-    .menu.visible { display: flex; }
-    .m-item { background: transparent; color: #fff; border: none; padding: 12px; text-align: left; font-size: 14px; border-radius: 8px; cursor: pointer; }
-    .m-item:focus, .m-item.active { background: rgba(255,255,255,0.1); color: var(--gold); }
-  </style>
+        /* القوائم المنبثقة للجودة والصوت */
+        .menu-popup {
+            position: absolute; bottom: 85px; right: 15px; background: rgba(20,20,20,0.95);
+            border: 1px solid #444; border-radius: 10px; min-width: 160px; display: none; flex-direction: column; padding: 8px; z-index: 20;
+        }
+        .menu-popup.show { display: flex; }
+        .menu-item {
+            background: none; border: none; color: #fff; padding: 10px; text-align: left; font-size: 14px; border-radius: 5px; cursor: pointer;
+        }
+        .menu-item:hover, .menu-item.active { background: var(--main-color); }
+        .menu-title { font-size: 11px; color: #888; padding: 5px 10px; border-bottom: 1px solid #333; margin-bottom: 5px; text-align: center; }
+    </style>
 </head>
 <body>
 
-<div id="player-root">
-  <video id="video" playsinline autoplay></video>
-  <div id="spinner" class="spinner"></div>
+<div id="player-container">
+    <video id="video" playsinline autoplay></video>
+    <div id="loading" class="loading-spinner"></div>
 
-  <div id="ui-layer">
-    <div class="top-bar">
-      <button class="btn btn-sm focusable" onclick="history.back()"><svg viewBox="0 0 24 24"><path d="M19 12H5 M12 19l-7-7 7-7"/></svg></button>
-      <div class="stream-title" id="stTitle">APiX Player 2</div>
+    <div class="controls-overlay" id="overlay">
+        <div class="top-bar" id="streamTitle">APiX Player 1</div>
+
+        <div class="bottom-bar">
+            <div class="seek-bar-container" id="seekSection">
+                <span id="curTime">00:00</span>
+                <input type="range" id="seekBar" value="0" min="0" step="1">
+                <span id="durTime">00:00</span>
+            </div>
+
+            <div class="actions">
+                <div class="btns-left">
+                    <button class="icon-btn" onclick="togglePlay()" id="playBtn">
+                        <svg id="pause-icon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                        <svg id="play-icon" viewBox="0 0 24 24" style="display:none;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    </button>
+                    <button class="icon-btn" onclick="video.currentTime += 10">
+                        <svg viewBox="0 0 24 24"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
+                    </button>
+                </div>
+
+                <div class="btns-right">
+                    <button class="icon-btn" onclick="toggleMenu('q-menu')" title="الجودة">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </button>
+                    <button class="icon-btn" onclick="toggleMenu('a-menu')" title="الصوت">
+                        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6a6 6 0 0 0-6 6 6 6 0 0 0 6 6 6 6 0 0 0 6-6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z"/></svg>
+                    </button>
+                    <button class="icon-btn" onclick="toggleFS()" title="ملء الشاشة">
+                        <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="bottom-bar">
-      <div class="progress-row">
-        <span id="curTime">00:00</span>
-        <input type="range" id="skBar" value="0" step="1">
-        <span id="durTime">00:00</span>
-      </div>
-
-      <div class="controls-row">
-        <div class="left-btns">
-          <button class="btn btn-sm focusable" onclick="seek(-10)"><svg viewBox="0 0 24 24"><path d="M15 7l-5 5 5 5 M9 7l-5 5 5 5"/></svg></button>
-          <button class="btn btn-big focusable" id="plBtn" onclick="togglePlay()">
-            <svg id="ic-pause" viewBox="0 0 24 24"><path d="M6 7h4v10H6zm8 0h4v10h-4z"/></svg>
-            <svg id="ic-play" viewBox="0 0 24 24" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
-          </button>
-          <button class="btn btn-sm focusable" onclick="seek(10)"><svg viewBox="0 0 24 24"><path d="M9 7l5 5-5 5 M15 7l5 5-5 5"/></svg></button>
-        </div>
-
-        <div class="right-btns">
-          <button class="btn btn-sm focusable" onclick="toggleMute()" id="mtBtn"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path id="v-waves" d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
-          <button class="btn btn-sm focusable" onclick="toggleMenu('q-menu')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3 1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8 1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></button>
-          <button class="btn btn-sm focusable" onclick="toggleFit()"><svg viewBox="0 0 24 24"><path d="M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7"/></svg></button>
-          <button class="btn btn-sm focusable" onclick="toggleFS()"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="q-menu" class="menu"></div>
+    <div id="q-menu" class="menu-popup"><div class="menu-title">الجودة</div></div>
+    <div id="a-menu" class="menu-popup"><div class="menu-title">اللغة</div></div>
 </div>
 
 <script>
-  let player;
-  const video = document.getElementById('video');
-  const spinner = document.getElementById('spinner');
-  const ui = document.getElementById('ui-layer');
-  let hideTimeout;
+    let player;
+    const video = document.getElementById('video');
+    const loading = document.getElementById('loading');
+    const overlay = document.getElementById('overlay');
+    let hideTimer;
 
-  // نفس دالة مشغل 1 تماماً (السر هنا)
-  function parseCK(s) {
-    if(!s || !s.includes(':')) return null;
-    const p = s.split(':');
-    return { 
-      kid: p[0].trim().toLowerCase().replace(/[^a-f0-9]/g,''), 
-      key: p[1].trim().toLowerCase().replace(/[^a-f0-9]/g,'') 
+    // دالة تنظيف المفاتيح التي نجحت سابقاً
+    function parseCK(s) {
+        if(!s || !s.includes(':')) return null;
+        const p = s.split(':');
+        return { 
+            kid: p[0].trim().toLowerCase().replace(/[^a-f0-9]/g,''), 
+            key: p[1].trim().toLowerCase().replace(/[^a-f0-9]/g,'') 
+        };
+    }
+
+    async function init() {
+        const p = new URLSearchParams(window.location.search);
+        const url = p.get('url'), ck = p.get('ck'), title = p.get('title') || "APiX Stream";
+        
+        document.getElementById('streamTitle').innerText = title;
+        loading.style.display = 'block';
+
+        shaka.polyfill.installAll();
+        player = new shaka.Player(video);
+
+        // أهم خطوة: حقن المفتاح قبل التحميل
+        const drm = parseCK(ck);
+        if(drm) {
+            player.configure({ drm: { clearKeys: { [drm.kid]: drm.key } } });
+        }
+
+        video.addEventListener('waiting', () => loading.style.display = 'block');
+        video.addEventListener('playing', () => loading.style.display = 'none');
+
+        try {
+            await player.load(url);
+            loading.style.display = 'none';
+            video.play();
+            showUi();
+            buildMenus(); // جلب الدقات واللغات
+            
+            // إخفاء شريط الوقت إذا كان بثاً مباشراً
+            if(player.isLive()) {
+                document.getElementById('seekSection').style.visibility = 'hidden';
+            }
+        } catch(e) { loading.style.display = 'none'; }
+    }
+
+    // بناء قوائم الدقة والصوت
+    function buildMenus() {
+        // 1. الجودة
+        const qMenu = document.getElementById('q-menu');
+        const tracks = player.getVariantTracks().filter(t => t.height).sort((a,b) => b.height - a.height);
+        const uniqueHeights = [...new Set(tracks.map(t => t.height))];
+        
+        qMenu.innerHTML = '<div class="menu-title">الجودة</div><button class="menu-item active" onclick="setQ(null, this)">تلقائي (Auto)</button>';
+        uniqueHeights.forEach(h => {
+            qMenu.innerHTML += `<button class="menu-item" onclick="setQ(${h}, this)">${h}p</button>`;
+        });
+
+        // 2. الصوت
+        const aMenu = document.getElementById('a-menu');
+        const langs = player.getAudioLanguages();
+        aMenu.innerHTML = '<div class="menu-title">اللغة</div>';
+        if(langs.length <= 1) {
+            aMenu.innerHTML += '<button class="menu-item active">الافتراضية</button>';
+        } else {
+            langs.forEach(l => {
+                aMenu.innerHTML += `<button class="menu-item" onclick="setAudio('${l}', this)">${l.toUpperCase()}</button>`;
+            });
+        }
+    }
+
+    window.setQ = (h, el) => {
+        if(!h) player.configure({ abr: { enabled: true } });
+        else {
+            player.configure({ abr: { enabled: false } });
+            player.selectVariantTrack(player.getVariantTracks().find(t => t.height === h), true);
+        }
+        document.getElementById('q-menu').classList.remove('show');
     };
-  }
 
-  async function init() {
-    const params = new URLSearchParams(window.location.search);
-    const url = params.get('url'), ck = params.get('ck'), title = params.get('title') || "APiX Stream";
-    
-    if(!url) return;
-    document.getElementById('stTitle').innerText = title;
-    spinner.style.display = 'block';
+    window.setAudio = (l, el) => {
+        player.selectAudioLanguage(l);
+        document.getElementById('a-menu').classList.remove('show');
+    };
 
-    shaka.polyfill.installAll();
-    player = new shaka.Player(video);
-    
-    // الحقن الإجباري قبل التحميل
-    const cp = parseCK(ck);
-    if(cp) {
-      player.configure({ drm: { clearKeys: { [cp.kid]: cp.key } } });
+    function toggleMenu(id) {
+        const m = document.getElementById(id);
+        const wasShow = m.classList.contains('show');
+        document.querySelectorAll('.menu-popup').forEach(p => p.classList.remove('show'));
+        if(!wasShow) m.classList.add('show');
     }
 
-    player.addEventListener('error', (e) => { console.error(e); spinner.style.display='none'; });
-    video.addEventListener('waiting', () => spinner.style.display='block');
-    video.addEventListener('playing', () => spinner.style.display='none');
-
-    try {
-      await player.load(url);
-      spinner.style.display = 'none';
-      video.play();
-      showUi();
-      buildQMenu();
-    } catch(e) { spinner.style.display='none'; }
-  }
-
-  function buildQMenu() {
-    const m = document.getElementById('q-menu');
-    const tracks = player.getVariantTracks().filter(t => t.height).sort((a,b) => b.height - a.height);
-    const heights = [...new Set(tracks.map(t => t.height))];
-    m.innerHTML = '<button class="m-item active" onclick="setQ(null, this)">تلقائي</button>';
-    heights.forEach(h => m.innerHTML += `<button class="m-item" onclick="setQ(${h}, this)">${h}p</button>`);
-  }
-
-  window.setQ = (h, el) => {
-    if(!h) player.configure({abr:{enabled:true}});
-    else { player.configure({abr:{enabled:false}}); player.selectVariantTrack(player.getVariantTracks().find(t=>t.height===h), true); }
-    document.querySelectorAll('.m-item').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
-    document.getElementById('q-menu').classList.remove('visible');
-  };
-
-  function toggleMenu(id) { document.getElementById(id).classList.toggle('visible'); }
-  function togglePlay() { 
-    if(video.paused) { video.play(); document.getElementById('ic-play').style.display='none'; document.getElementById('ic-pause').style.display='block'; }
-    else { video.pause(); document.getElementById('ic-play').style.display='block'; document.getElementById('ic-pause').style.display='none'; }
-  }
-  function seek(s) { video.currentTime += s; showUi(); }
-  function toggleMute() { video.muted = !video.muted; document.getElementById('v-waves').style.display = video.muted ? 'none' : 'block'; }
-  function toggleFS() { if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-  let fm = 0;
-  function toggleFit() { fm=(fm+1)%3; video.style.objectFit=fm===0?'contain':fm===1?'fill':'cover'; }
-  
-  function showUi() { 
-    ui.classList.add('visible'); 
-    clearTimeout(hideTimeout); 
-    hideTimeout = setTimeout(() => { if(!video.paused) ui.classList.remove('visible'); }, 4000); 
-  }
-
-  video.addEventListener('timeupdate', () => {
-    const cur = video.currentTime, dur = video.duration;
-    if(dur > 0) {
-      document.getElementById('curTime').innerText = fmt(cur);
-      document.getElementById('durTime').innerText = fmt(dur);
-      const sk = document.getElementById('skBar'); sk.max = dur; sk.value = cur;
-      sk.style.backgroundSize = (cur/dur*100)+'% 100%';
+    function togglePlay() {
+        if(video.paused) { video.play(); document.getElementById('play-icon').style.display='none'; document.getElementById('pause-icon').style.display='block'; }
+        else { video.pause(); document.getElementById('play-icon').style.display='block'; document.getElementById('pause-icon').style.display='none'; }
     }
-  });
 
-  function fmt(s) { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), v=Math.floor(s%60); return (h>0?h+":":"")+m.toString().padStart(2,'0')+":"+v.toString().padStart(2,'0'); }
-  document.getElementById('skBar').oninput = (e) => video.currentTime = e.target.value;
-  document.addEventListener('mousemove', showUi); document.addEventListener('touchstart', showUi);
-  
-  init();
+    function toggleFS() {
+        if(!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+    }
+
+    function showUi() {
+        overlay.classList.add('visible');
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+            if(!video.paused) { 
+                overlay.classList.remove('visible'); 
+                document.querySelectorAll('.menu-popup').forEach(p => p.classList.remove('show'));
+            }
+        }, 4000);
+    }
+
+    video.addEventListener('timeupdate', () => {
+        const c = video.currentTime, d = video.duration;
+        document.getElementById('curTime').innerText = fmt(c);
+        document.getElementById('durTime').innerText = fmt(d);
+        const sk = document.getElementById('seekBar'); sk.max = d; sk.value = c;
+        if(d > 0) sk.style.backgroundSize = (c/d*100)+'% 100%';
+    });
+
+    function fmt(s) {
+        if(isNaN(s) || s < 0) return "00:00";
+        const m=Math.floor(s/60), v=Math.floor(s%60);
+        return m.toString().padStart(2,'0')+":"+v.toString().padStart(2,'0');
+    }
+
+    document.getElementById('seekBar').oninput = (e) => video.currentTime = e.target.value;
+    document.addEventListener('mousemove', showUi);
+    document.addEventListener('touchstart', showUi);
+
+    init();
 </script>
 </body>
 </html>
